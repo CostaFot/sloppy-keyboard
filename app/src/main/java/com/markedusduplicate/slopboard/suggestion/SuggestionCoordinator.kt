@@ -35,26 +35,35 @@ class SuggestionCoordinator @Inject constructor(
     @LlmSuggestions private val llmSource: SuggestionSource,
     @ApplicationCoroutineScope scope: CoroutineScope,
 ) {
-    val suggestions: StateFlow<List<String>> =
+    val suggestions: StateFlow<Suggestions> =
         combine(tracker.textBeforeCursor, tracker.allowed) { text, allowed ->
             if (allowed) text else null
         }
             .debounce(DEBOUNCE_MS)
             .distinctUntilChanged()
             .flatMapLatest { text -> suggestionsFor(text) }
-            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+            .stateIn(scope, SharingStarted.Eagerly, Suggestions.EMPTY)
 
-    private fun suggestionsFor(text: String?): Flow<List<String>> {
-        if (text == null) return flowOf(emptyList())
+    private fun suggestionsFor(text: String?): Flow<Suggestions> {
+        if (text == null) return flowOf(Suggestions.EMPTY)
         return flow {
             val instant = dbSource.suggest(text)
-            emit(instant)
+            emit(Suggestions(instant, fromLlm = false))
             val refined = llmSource.suggest(text)
-            if (refined.isNotEmpty() && refined != instant) emit(refined)
+            if (refined.isNotEmpty() && refined != instant) {
+                emit(Suggestions(refined, fromLlm = true))
+            }
         }
     }
 
     companion object {
         const val DEBOUNCE_MS = 300L
+    }
+}
+
+/** The current chips plus whether they came from the LLM (vs the instant n-gram source). */
+data class Suggestions(val words: List<String>, val fromLlm: Boolean) {
+    companion object {
+        val EMPTY = Suggestions(emptyList(), fromLlm = false)
     }
 }

@@ -20,9 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.markedusduplicate.slopboard.retain.rememberRetainedViewModel
+import com.markedusduplicate.slopboard.suggestion.Suggestions
 import dagger.hilt.android.EntryPointAccessors
 
-private val ChipColor = Color(0xFF6C6565)
+private val NgramChipColor = Color(0xFF6C6565)
+private val LlmChipColor = Color(0xFF5C6BC0)
 
 /**
  * The three predictive-text chips rendered above the key grid. Collapses to nothing when there
@@ -45,11 +47,13 @@ fun SuggestionBar(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SuggestionBarContent(
-    suggestions: List<String>,
+    suggestions: Suggestions,
     onAccept: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (suggestions.isEmpty()) return
+    if (suggestions.words.isEmpty()) return
+
+    val chipColor = if (suggestions.fromLlm) LlmChipColor else NgramChipColor
 
     Row(
         modifier = modifier
@@ -59,9 +63,10 @@ private fun SuggestionBarContent(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        suggestions.forEach { word ->
+        suggestions.words.forEach { word ->
             SuggestionChip(
                 word = word,
+                color = chipColor,
                 onClick = { onAccept(word) },
                 modifier = Modifier.weight(1f),
             )
@@ -72,6 +77,7 @@ private fun SuggestionBarContent(
 @Composable
 private fun SuggestionChip(
     word: String,
+    color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,7 +85,7 @@ private fun SuggestionChip(
         onClick = onClick,
         modifier = modifier.height(36.dp),
         shape = RoundedCornerShape(10.dp),
-        color = ChipColor,
+        color = color,
     ) {
         Row(
             modifier = Modifier
@@ -102,9 +108,18 @@ private fun SuggestionChip(
 
 @Preview
 @Composable
-private fun SuggestionBarPreview() {
+private fun NgramSuggestionBarPreview() {
     SuggestionBarContent(
-        suggestions = listOf("hell", "heck", "help"),
+        suggestions = Suggestions(listOf("hell", "heck", "help"), fromLlm = false),
+        onAccept = {},
+    )
+}
+
+@Preview
+@Composable
+private fun LlmSuggestionBarPreview() {
+    SuggestionBarContent(
+        suggestions = Suggestions(listOf("hell", "heck", "help"), fromLlm = true),
         onAccept = {},
     )
 }

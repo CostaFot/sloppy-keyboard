@@ -60,6 +60,9 @@ fun FirstScreen(
         goNext = goNext,
         onText = {
             firstViewModel.onText(it)
+        },
+        onDelete = {
+            firstViewModel.onDelete()
         }
     )
 
@@ -74,7 +77,8 @@ fun FirstScreen(
 @Composable
 private fun InnerFirstScreenContent(
     goNext: () -> Unit,
-    onText: (String) -> Unit
+    onText: (String) -> Unit,
+    onDelete: () -> Unit,
 ) {
     val keyboardLayout = listOf(
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
@@ -245,7 +249,13 @@ private fun InnerFirstScreenContent(
                         val weight = if (key == "Space") 3f else 1f // Define weight here
                         KeyboardButton(
                             text = key,
-                            onClick = onText,
+                            onClick = { tapped ->
+                                when (tapped) {
+                                    "Backspace" -> onDelete()
+                                    "Space" -> onText(" ")
+                                    else -> onText(tapped)
+                                }
+                            },
                             modifier = Modifier
                                 .weight(weight) // Apply weight
                                 .height(50.dp)
@@ -266,7 +276,8 @@ private fun InnerFirstScreenContent(
 private fun InnerFirstScreenContentPreview() {
     InnerFirstScreenContent(
         goNext = { /*TODO*/ },
-        onText = {}
+        onText = {},
+        onDelete = {}
     )
 }
 @Composable
@@ -310,6 +321,3 @@ fun KeyboardButton(
         }
     }
 }
-
-
-

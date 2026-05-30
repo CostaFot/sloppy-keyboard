@@ -38,7 +38,7 @@ class SuggestionCoordinatorTest {
         runCurrent()
 
         assertEquals(listOf("hello "), calls)
-        assertEquals(listOf("x"), coordinator.suggestions.value)
+        assertEquals(Suggestions(listOf("x"), fromLlm = false), coordinator.suggestions.value)
     }
 
     @Test
@@ -56,7 +56,7 @@ class SuggestionCoordinatorTest {
         runCurrent()
 
         assertEquals(listOf("foo ", "foo bar "), calls)
-        assertEquals(listOf("foo bar"), coordinator.suggestions.value)
+        assertEquals(Suggestions(listOf("foo bar"), fromLlm = false), coordinator.suggestions.value)
     }
 
     @Test
@@ -69,10 +69,10 @@ class SuggestionCoordinatorTest {
         tracker.updateText("hi ")
         advanceTimeBy(pastDebounce())
         runCurrent()
-        assertEquals(listOf("db"), coordinator.suggestions.value)
+        assertEquals(Suggestions(listOf("db"), fromLlm = false), coordinator.suggestions.value)
 
         advanceTimeBy(101)
         runCurrent()
-        assertEquals(listOf("llm"), coordinator.suggestions.value)
+        assertEquals(Suggestions(listOf("llm"), fromLlm = true), coordinator.suggestions.value)
     }
 }

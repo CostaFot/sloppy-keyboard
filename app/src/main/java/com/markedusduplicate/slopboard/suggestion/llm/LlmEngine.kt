@@ -5,60 +5,51 @@ import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.markedusduplicate.common.coroutine.DispatcherProvider
+import com.markedusduplicate.common.di.ApplicationCoroutineScope
 import com.markedusduplicate.logging.logDebug
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Owns the LiteRT-LM [Engine] for the app session: resolves the model file, initialises the engine
- * once (trying NPU → GPU → CPU), and keeps it alive.
+ * Owns the LiteRT-LM [Engine] for the app session: resolves the model file and initialises the
+ * engine once (trying NPU → GPU → CPU), keeping it alive.
+ *
+ * Warm-up runs on the application scope, not the per-keystroke suggestion flow, so it can't be
+ * cancelled and restarted by typing. [engineOrNull] is non-blocking: it returns `null` while the
+ * model is still loading (or if no model is present / every backend fails), and the keyboard falls
+ * back to its on-device n-gram suggestions until the engine comes online.
  *
  * The model is loaded from the first `.litertlm` file in the app's external `models/` directory
- * (push one with `adb push … /Android/data/<pkg>/files/models/`). If no model is present — or every
- * backend fails to initialise — [engineOrNull] returns `null` and the keyboard falls back to its
- * on-device n-gram suggestions.
+ * (push one with `adb push … /Android/data/<pkg>/files/models/`).
  */
 @Singleton
 class LlmEngine @Inject constructor(
     @ApplicationContext private val context: Context,
+    @ApplicationCoroutineScope private val scope: CoroutineScope,
     private val dispatcherProvider: DispatcherProvider,
 ) {
-    private val mutex = Mutex()
-
     @Volatile
     private var engine: Engine? = null
 
-    @Volatile
-    private var initFailed = false
+    private val warmUp: Unit by lazy {
+        scope.launch(dispatcherProvider.io) { engine = initialize() }
+        Unit
+    }
 
-    suspend fun engineOrNull(): Engine? {
-        engine?.let { return it }
+    fun engineOrNull(): Engine? {
+        warmUp
+        return engine
+    }
+
+    private fun initialize(): Engine? {
         val modelPath = resolveModelPath() ?: return null
-        if (initFailed) return null
-
-        return mutex.withLock {
-            engine ?: run {
-                if (initFailed) return@run null
-                val created = withContext(dispatcherProvider.io) { initialize(modelPath) }
-                if (created == null) initFailed = true else engine = created
-                created
-            }
-        }
-    }
-
-    fun close() {
-        engine?.close()
-        engine = null
-    }
-
-    private fun initialize(modelPath: String): Engine? {
         for (backend in backends()) {
+            var candidate: Engine? = null
             try {
-                val candidate = Engine(
+                candidate = Engine(
                     EngineConfig(
                         modelPath = modelPath,
                         backend = backend,
@@ -70,16 +61,21 @@ class LlmEngine @Inject constructor(
                 return candidate
             } catch (t: Throwable) {
                 logDebug { "LiteRT backend $backend failed: ${t.message}" }
+                runCatching { candidate?.close() }
             }
         }
+        logDebug { "LiteRT: no backend could initialise the model" }
         return null
     }
 
     private fun backends(): List<Backend> = listOf(
         Backend.NPU(nativeLibraryDir = context.applicationInfo.nativeLibraryDir),
         Backend.GPU(),
-        Backend.CPU(),
+        Backend.CPU(numOfThreads = cpuThreads()),
     )
+
+    private fun cpuThreads(): Int =
+        Runtime.getRuntime().availableProcessors().coerceIn(1, MAX_CPU_THREADS)
 
     private fun resolveModelPath(): String? =
         context.getExternalFilesDir(MODELS_DIR)
@@ -90,5 +86,6 @@ class LlmEngine @Inject constructor(
     private companion object {
         const val MODELS_DIR = "models"
         const val MODEL_EXTENSION = ".litertlm"
+        const val MAX_CPU_THREADS = 4
     }
 }
