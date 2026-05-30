@@ -17,6 +17,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Template">
 
+        <!-- Vendor native libraries the LiteRT-LM GPU/NPU delegates dlopen at runtime. -->
+        <uses-native-library
+            android:name="libOpenCL.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libvndksupport.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libcdsprpc.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libedgetpu_litert.so"
+            android:required="false" />
+
         <activity
             android:name=".ui.activity.MainActivity"
             android:exported="true"

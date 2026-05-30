@@ -53,7 +53,10 @@ class LlmEngine @Inject constructor(
                     EngineConfig(
                         modelPath = modelPath,
                         backend = backend,
-                        cacheDir = context.cacheDir.absolutePath,
+                        visionBackend = if (backend is Backend.GPU) Backend.GPU() else null,
+                        audioBackend = if (backend is Backend.GPU) Backend.CPU() else null,
+                        maxNumTokens = MAX_NUM_TOKENS,
+                        cacheDir = null,
                     ),
                 )
                 candidate.initialize()
@@ -69,9 +72,9 @@ class LlmEngine @Inject constructor(
     }
 
     private fun backends(): List<Backend> = listOf(
-        Backend.NPU(nativeLibraryDir = context.applicationInfo.nativeLibraryDir),
         Backend.GPU(),
         Backend.CPU(numOfThreads = cpuThreads()),
+        Backend.NPU(nativeLibraryDir = context.applicationInfo.nativeLibraryDir),
     )
 
     private fun cpuThreads(): Int =
@@ -87,5 +90,6 @@ class LlmEngine @Inject constructor(
         const val MODELS_DIR = "models"
         const val MODEL_EXTENSION = ".litertlm"
         const val MAX_CPU_THREADS = 4
+        const val MAX_NUM_TOKENS = 1024
     }
 }
