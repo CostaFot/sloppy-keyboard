@@ -1,6 +1,7 @@
 package com.markedusduplicate.slopboard.keyboard
 
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -13,6 +14,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.logging.logDebug
+import com.markedusduplicate.slopboard.keyboard.observe.InputContextTracker
+import com.markedusduplicate.slopboard.keyboard.observe.ObservationManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -33,6 +36,12 @@ class SlopboardKeyboardService :
 
     @Inject
     lateinit var keyboardHandler: KeyboardHandler
+
+    @Inject
+    lateinit var inputContextTracker: InputContextTracker
+
+    @Inject
+    lateinit var observationManager: ObservationManager
 
     override val viewModelStore: ViewModelStore = ViewModelStore()
 
@@ -68,9 +77,45 @@ class SlopboardKeyboardService :
                             currentInputConnection.commitText("", 1)
                         }
                     }
+
+                    is KeyboardMessage.CommitSuggestion -> {
+                        if (it.replacePrefixLength > 0) {
+                            currentInputConnection.deleteSurroundingText(it.replacePrefixLength, 0)
+                        }
+                        currentInputConnection.commitText("${it.word} ", 1)
+                    }
                 }
+                refreshInputContext()
             }
         }
+    }
+
+    /** Snapshot the text left of the cursor and feed the learning + suggestion layers. */
+    private fun refreshInputContext() {
+        val before = currentInputConnection?.getTextBeforeCursor(CONTEXT_LOOKBACK, 0)?.toString() ?: ""
+        inputContextTracker.updateText(before)
+        observationManager.onTextBeforeCursor(before)
+    }
+
+    override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(info, restarting)
+        inputContextTracker.onStartInput(info)
+        observationManager.reset()
+        refreshInputContext()
+    }
+
+    override fun onUpdateSelection(
+        oldSelStart: Int,
+        oldSelEnd: Int,
+        newSelStart: Int,
+        newSelEnd: Int,
+        candidatesStart: Int,
+        candidatesEnd: Int,
+    ) {
+        super.onUpdateSelection(
+            oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd,
+        )
+        refreshInputContext()
     }
 
     override fun onEvaluateInputViewShown(): Boolean {
@@ -96,5 +141,9 @@ class SlopboardKeyboardService :
     override fun onDestroy() {
         logDebug { "keyboard onDestroy" }
         super.onDestroy()
+    }
+
+    private companion object {
+        const val CONTEXT_LOOKBACK = 100
     }
 }

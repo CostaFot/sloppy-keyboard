@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.markedusduplicate.slopboard.keyboard.suggestion.SuggestionBar
 import com.markedusduplicate.slopboard.retain.rememberRetainedViewModel
 import dagger.hilt.android.EntryPointAccessors
 import timber.log.Timber
@@ -105,6 +106,8 @@ private fun InnerFirstScreenContent(
                 ),
             horizontalAlignment = Alignment.CenterHorizontally // Center content horizontally
         ) {
+            SuggestionBar()
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

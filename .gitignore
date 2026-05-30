@@ -88,4 +88,4 @@ lint/tmp/
 .claude/
 
 # Claude Code plans
-/plans/
+plans/

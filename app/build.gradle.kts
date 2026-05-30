@@ -91,6 +91,11 @@ dependencies {
 
     implementation(libs.androidx.startup)
 
+    // local persistence (suggestion learning DB)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
     // networking
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp.logging)
