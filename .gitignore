@@ -89,3 +89,4 @@ lint/tmp/
 
 # Claude Code plans
 plans/
+model/
