@@ -25,12 +25,10 @@ class RetainDecorator<T : Any>(
 
 
 @Composable
-fun rememberRetainDecorator(): RetainDecorator<Any> {
-    val retainedValuesStoreRegistry = retainRetainedValuesStoreRegistry()
-
-    return remember {
-        RetainDecorator(
-            retainedValuesStoreRegistry = retainedValuesStoreRegistry,
-        )
-    }
+fun <T : Any> rememberRetainDecorator(
+    retainedValuesStoreRegistry: RetainedValuesStoreRegistry = retainRetainedValuesStoreRegistry(),
+): RetainDecorator<T> = remember(retainedValuesStoreRegistry) {
+    RetainDecorator(
+        retainedValuesStoreRegistry = retainedValuesStoreRegistry,
+    )
 }

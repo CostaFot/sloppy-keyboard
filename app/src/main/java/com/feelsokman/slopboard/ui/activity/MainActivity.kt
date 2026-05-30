@@ -119,14 +119,11 @@ class MainActivity : AppCompatActivity() {
 
                 Surface {
                     val backStack = rememberNavBackStack(RouteA)
-
-                    val retainDecorator = rememberRetainDecorator()
-
                     NavDisplay(
                         backStack = backStack,
                         onBack = { backStack.removeLastOrNull() },
                         entryDecorators = listOf(
-                            retainDecorator,
+                            rememberRetainDecorator()
                         ),
                         entryProvider = entryProvider {
                             entry<RouteA> {
