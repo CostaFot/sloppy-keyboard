@@ -50,6 +50,11 @@ class TemplateKeyboardService : InputMethodService() {
         }
     }
 
+    override fun onEvaluateInputViewShown(): Boolean {
+        super.onEvaluateInputViewShown()
+        return true
+    }
+
     override fun onCreateInputView(): View {
         logDebug { "keyboard onCreateInputView" }
         return createKeyboardComposeView(this, keyboardStateHolder)
