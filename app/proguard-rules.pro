@@ -47,10 +47,10 @@
     public static ** valueOf(java.lang.String);
 }
 
--keep class com.feelsokman.slopboard.net.model** { *; }
--keep class com.feelsokman.slopboard.analytics** { *; }
--keep class com.feelsokman.voice.model** { *; }
--keep class com.feelsokman.storage** { *; }
+-keep class com.markedusduplicate.slopboard.net.model** { *; }
+-keep class com.markedusduplicate.slopboard.analytics** { *; }
+-keep class com.markedusduplicate.voice.model** { *; }
+-keep class com.markedusduplicate.storage** { *; }
 -keep class com.nightonke.boommenu.** { *; }
 
 -keep public class androidx.support.v7.widget.** { *; }

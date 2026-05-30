@@ -7,11 +7,11 @@ plugins {
 
 android {
     defaultConfig {
-        applicationId = "com.feelsokman.slopboard"
+        applicationId = "com.markedusduplicate.slopboard"
         versionCode = 1
         versionName = "0.0.1"
 
-        testInstrumentationRunner = "com.feelsokman.testing.CustomTestRunner"
+        testInstrumentationRunner = "com.markedusduplicate.testing.CustomTestRunner"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -56,7 +56,7 @@ android {
         }
     }
 
-    namespace = "com.feelsokman.slopboard"
+    namespace = "com.markedusduplicate.slopboard"
 }
 
 dependencies {
@@ -90,6 +90,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     implementation(libs.androidx.startup)
+
+    // local persistence (suggestion learning DB)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // networking
     implementation(libs.kotlinx.serialization.json)

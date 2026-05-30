@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.feelsokman.testing"
+    namespace = "com.markedusduplicate.testing"
 
     defaultConfig {
-        testInstrumentationRunner = "com.feelsokman.testing.CustomTestRunner"
+        testInstrumentationRunner = "com.markedusduplicate.testing.CustomTestRunner"
     }
 
 }

@@ -8,7 +8,7 @@ android {
         checkDependencies = true
     }
 
-    namespace = "com.feelsokman.design"
+    namespace = "com.markedusduplicate.design"
 }
 
 dependencies {

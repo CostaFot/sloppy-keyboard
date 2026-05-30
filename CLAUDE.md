@@ -9,7 +9,7 @@
 Navigation 3. The keyboard UI is rendered by Compose inside an `InputMethodService`, not a
 normal Activity.
 
-- applicationId / namespace: `com.feelsokman.slopboard` (debug variant: `.debug`)
+- applicationId / namespace: `com.markedusduplicate.slopboard` (debug variant: `.debug`)
 - Build variants: `debug` / `release` only (no product flavors)
 - DI: Hilt. App class: `SlopboardApplication` (`@HiltAndroidApp`)
 
@@ -18,7 +18,8 @@ normal Activity.
 - `app` — the keyboard + a demo `MainActivity`
 - `design` — theme/UI (`AppTheme`)
 - `common`, `common-test`, `logging`, `work`, `auth`, `testing` — shared libs
-  (namespaces stay `com.feelsokman.*`; only the app/template packages were renamed to slopboard)
+  (namespaces stay `com.markedusduplicate.*`; only the app/template packages were renamed to
+  slopboard)
 - `build-logic/convention` — Gradle convention plugins (`application.common`,
   `application.compose.common`, `hilt.common`, `library.common`, `library.compose.common`)
 
@@ -73,5 +74,5 @@ input → On-screen keyboards, then select it as the active IME.
 
 ## Logging
 
-`logDebug { … }` (`com.feelsokman.logging`) and `Timber` (tag `"KeyboardComposeView"` for the
+`logDebug { … }` (`com.markedusduplicate.logging`) and `Timber` (tag `"KeyboardComposeView"` for the
 keyboard view lifecycle).

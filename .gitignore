@@ -86,3 +86,6 @@ lint/tmp/
 
 # Version control
 .claude/
+
+# Claude Code plans
+plans/
