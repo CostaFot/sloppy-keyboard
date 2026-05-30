@@ -1,19 +1,3 @@
-# android-template-compose
+# slopboard
 
-Template repo for android compose projects using
-
-`Navigation Compose`
-
-`Hilt`
-
-`Retrofit`
-
-`MVVM`
-
-`Coroutines`
-
-`Version Catalogs`
-
-`KotlinX`
-
-`Coil`
+This will be a cool compose keyboard

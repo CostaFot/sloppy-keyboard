@@ -1,5 +1,5 @@
 import com.android.build.gradle.api.AndroidBasePlugin
-import com.feelsokayman.template.libs
+import com.feelsokman.slopboard.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply

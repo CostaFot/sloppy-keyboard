@@ -1,7 +1,8 @@
 import com.android.build.api.dsl.LibraryExtension
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
-import com.feelsokayman.template.configureKotlinAndroid
-import com.feelsokayman.template.disableUnnecessaryAndroidTests
+import com.feelsokman.slopboard.configureKotlinAndroid
+import com.feelsokman.slopboard.disableUnnecessaryAndroidTests
+import com.feelsokman.slopboard.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply
@@ -30,6 +31,7 @@ class LibraryCommonPlugin : Plugin<Project> {
             dependencies {
                 add("androidTestImplementation", kotlin("test"))
                 add("testImplementation", kotlin("test"))
+                add("testImplementation", libs.findLibrary("junit4").get())
             }
         }
     }

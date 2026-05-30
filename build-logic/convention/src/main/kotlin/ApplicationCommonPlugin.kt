@@ -1,6 +1,6 @@
 import com.android.build.api.dsl.ApplicationExtension
-import com.feelsokayman.template.configureFlavors
-import com.feelsokayman.template.configureKotlinAndroid
+import com.feelsokman.slopboard.configureKotlinAndroid
+import com.feelsokman.slopboard.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply
@@ -17,12 +17,13 @@ class ApplicationCommonPlugin : Plugin<Project> {
                 configureKotlinAndroid(this)
                 defaultConfig.targetSdk = 35
                 testOptions.animationsDisabled = true
-                configureFlavors(this)
             }
 
             dependencies {
                 add("androidTestImplementation", kotlin("test"))
                 add("testImplementation", kotlin("test"))
+                add("testImplementation", libs.findLibrary("junit4").get())
+                add("testImplementation", libs.findLibrary("kotlinx-coroutines-test").get())
             }
         }
     }

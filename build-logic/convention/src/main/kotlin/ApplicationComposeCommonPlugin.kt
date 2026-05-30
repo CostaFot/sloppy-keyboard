@@ -1,5 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
-import com.feelsokayman.template.configureAndroidCompose
+import com.feelsokman.slopboard.configureAndroidCompose
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply

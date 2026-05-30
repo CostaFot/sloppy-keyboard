@@ -14,7 +14,7 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "android-template-compose"
+rootProject.name = "slopboard"
 include(":app")
 include(":lint")
 include(":design")
