@@ -37,7 +37,6 @@ fun SuggestionBar(modifier: Modifier = Modifier) {
             .suggestionViewModel()
     }
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
-
     SuggestionBarContent(
         suggestions = suggestions,
         onAccept = viewModel::onAccept,
