@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
-        android:name=".TemplateApplication"
+        android:name=".SlopboardApplication"
         android:allowBackup="true"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
@@ -58,7 +58,7 @@
                 android:value="true" />
         </service> <!-- custom keyboard impl -->
         <service
-            android:name=".keyboard.TemplateKeyboardService"
+            android:name=".keyboard.SlopboardKeyboardService"
             android:exported="true"
             android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>

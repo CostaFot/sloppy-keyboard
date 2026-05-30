@@ -37,8 +37,8 @@ data object First
 data class Second(val id: String)
 
 fun createKeyboardComposeView(
-    service: TemplateKeyboardService,
-    keyboardStateHolder: KeyboardStateHolder
+    service: SlopboardKeyboardService,
+    keyboardStateHolder: KeyboardStateHolder,
 ): ComposeView {
     val composeView = ComposeView(service)
     val customLifecycleOwner = CustomLifecycleOwner()

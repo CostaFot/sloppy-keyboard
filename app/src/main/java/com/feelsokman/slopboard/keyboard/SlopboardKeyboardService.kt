@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class TemplateKeyboardService : InputMethodService() {
+class SlopboardKeyboardService : InputMethodService() {
     @Inject
     lateinit var keyboardStateHolder: KeyboardStateHolder
 

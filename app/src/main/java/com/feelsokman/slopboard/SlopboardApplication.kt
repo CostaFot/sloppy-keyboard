@@ -17,7 +17,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Inject
 
 @HiltAndroidApp
-class TemplateApplication : Application(), Configuration.Provider, SingletonImageLoader.Factory {
+class SlopboardApplication : Application(), Configuration.Provider, SingletonImageLoader.Factory {
 
     @Inject
     lateinit var appInitializer: AppInitializer
