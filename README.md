@@ -1,4 +1,4 @@
-# android-template-compose
+# slopboard
 
 Template repo for android compose projects using
 

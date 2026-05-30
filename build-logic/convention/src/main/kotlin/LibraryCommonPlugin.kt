@@ -1,7 +1,7 @@
 import com.android.build.api.dsl.LibraryExtension
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
-import com.feelsokayman.template.configureKotlinAndroid
-import com.feelsokayman.template.disableUnnecessaryAndroidTests
+import com.feelsokman.slopboard.configureKotlinAndroid
+import com.feelsokman.slopboard.disableUnnecessaryAndroidTests
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply

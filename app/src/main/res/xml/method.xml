@@ -3,7 +3,7 @@
     android:isDefault="true"
     android:supportsSwitchingToNextInputMethod="true"
     android:icon="@drawable/ic_launcher_foreground"
-    android:settingsActivity="com.feelsokman.androidtemplate.ui.activity.MainActivity">
+    android:settingsActivity="com.feelsokman.slopboard.ui.activity.MainActivity">
     <subtype
         android:isAsciiCapable="true"
         android:imeSubtypeMode="keyboard" />

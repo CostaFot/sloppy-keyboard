@@ -7,7 +7,7 @@ plugins {
 
 android {
     defaultConfig {
-        applicationId = "com.feelsokman.androidtemplate.compose"
+        applicationId = "com.feelsokman.slopboard"
         versionCode = 1
         versionName = "0.0.1"
 
@@ -30,7 +30,7 @@ android {
     buildTypes {
         val debug by getting {
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "Compose Debug")
+            resValue("string", "app_name", "Slopboard Debug")
         }
         val release by getting {
             isMinifyEnabled = true
@@ -39,7 +39,7 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("debug")
-            resValue("string", "app_name", "Compose")
+            resValue("string", "app_name", "Slopboard")
         }
     }
 
@@ -56,7 +56,7 @@ android {
         }
     }
 
-    namespace = "com.feelsokman.androidtemplate"
+    namespace = "com.feelsokman.slopboard"
 }
 
 dependencies {
