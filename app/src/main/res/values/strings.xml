@@ -1,0 +1,5 @@
+<resources>
+    <string name="get_todo">Get TODO</string>
+    <string name="title_activity_second">SecondActivity</string>
+    <string name="title_activity_third">ThirdActivity</string>
+</resources>
