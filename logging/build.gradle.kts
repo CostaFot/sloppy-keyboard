@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.feelsokman.logging"
+    namespace = "com.markedusduplicate.logging"
 }
 
 dependencies {

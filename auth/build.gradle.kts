@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.feelsokman.auth"
+    namespace = "com.markedusduplicate.auth"
 }
 
 dependencies {

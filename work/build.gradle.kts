@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.feelsokman.work"
+    namespace = "com.markedusduplicate.work"
 }
 
 dependencies {

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.feelsokman.common.test"
+    namespace = "com.markedusduplicate.common.test"
 }
 
 dependencies {

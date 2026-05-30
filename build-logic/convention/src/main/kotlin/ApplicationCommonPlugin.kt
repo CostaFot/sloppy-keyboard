@@ -1,6 +1,6 @@
 import com.android.build.api.dsl.ApplicationExtension
-import com.feelsokman.slopboard.configureKotlinAndroid
-import com.feelsokman.slopboard.libs
+import com.markedusduplicate.slopboard.configureKotlinAndroid
+import com.markedusduplicate.slopboard.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply

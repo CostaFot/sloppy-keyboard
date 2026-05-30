@@ -4,7 +4,7 @@ plugins {
     `kotlin-dsl`
 }
 
-group = "com.feelsokman.slopboard.buildlogic"
+group = "com.markedusduplicate.slopboard.buildlogic"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17

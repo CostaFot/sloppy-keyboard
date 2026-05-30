@@ -70,7 +70,7 @@
                 android:resource="@xml/method" />
         </service>
         <service
-            android:name="com.feelsokman.auth.AuthenticatorService"
+            android:name="com.markedusduplicate.auth.AuthenticatorService"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.accounts.AccountAuthenticator" />
