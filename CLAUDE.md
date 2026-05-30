@@ -39,9 +39,12 @@ input → On-screen keyboards, then select it as the active IME.
 
 ### IME service — `keyboard/SlopboardKeyboardService.kt`
 
-- `onCreateInputView()` builds the Compose view by hand in `keyboard/KeyboardCompose.kt`
-  (`createKeyboardComposeView`): a `ComposeView` wired to a `CustomLifecycleOwner` + a manual
-  `Recomposer`, with `DisposeOnDetachedFromWindow`. There is no Activity host.
+- The service extends `keyboard/LifecycleInputMethodService.kt` (a `ServiceLifecycleDispatcher`-
+  backed `InputMethodService`, so the service itself is the `LifecycleOwner`) and also implements
+  `ViewModelStoreOwner` + `SavedStateRegistryOwner`. There is no Activity host.
+- `onCreateInputView()` returns a `keyboard/KeyboardComposeView.kt` (`AbstractComposeView`, so
+  Compose owns its own `Recomposer`/composition) and sets the service as the view-tree lifecycle /
+  view-model-store / saved-state / navigation-event-dispatcher owner on `window?.window?.decorView`.
 - `onEvaluateInputViewShown()` is overridden to return `true`. Without it the keyboard is
   hidden whenever a hardware keyboard is present (e.g. an emulator with "Enable keyboard
   input"), and `onCreateInputView()` is never called.
