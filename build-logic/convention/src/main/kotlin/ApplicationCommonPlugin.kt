@@ -1,5 +1,6 @@
 import com.android.build.api.dsl.ApplicationExtension
 import com.feelsokman.slopboard.configureKotlinAndroid
+import com.feelsokman.slopboard.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply
@@ -21,6 +22,8 @@ class ApplicationCommonPlugin : Plugin<Project> {
             dependencies {
                 add("androidTestImplementation", kotlin("test"))
                 add("testImplementation", kotlin("test"))
+                add("testImplementation", libs.findLibrary("junit4").get())
+                add("testImplementation", libs.findLibrary("kotlinx-coroutines-test").get())
             }
         }
     }

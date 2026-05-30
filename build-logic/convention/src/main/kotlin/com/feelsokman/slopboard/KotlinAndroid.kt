@@ -4,6 +4,7 @@ package com.feelsokman.slopboard
 import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.provideDelegate
 import org.gradle.kotlin.dsl.withType
@@ -32,6 +33,12 @@ internal fun Project.configureKotlinAndroid(
         }
     }
     configureKotlin()
+
+    // A test source set may contain only utilities (no @Test methods yet) — don't fail
+    // the build for "test sources present but none discovered".
+    tasks.withType<Test>().configureEach {
+        failOnNoDiscoveredTests.set(false)
+    }
 
     dependencies {
         add("coreLibraryDesugaring", libs.findLibrary("android.desugarJdkLibs").get())

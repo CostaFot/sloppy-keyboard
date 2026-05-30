@@ -1,0 +1,5 @@
+# Keep the Gradle wrapper shell script LF so it runs on Linux CI runners
+gradlew text eol=lf
+
+# Windows scripts stay CRLF
+*.bat text eol=crlf
