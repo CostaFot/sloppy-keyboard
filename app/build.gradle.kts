@@ -96,6 +96,9 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // on-device LLM inference
+    implementation(libs.litertlm.android)
+
     // networking
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp.logging)

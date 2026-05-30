@@ -34,4 +34,10 @@ class FirstViewModel @Inject constructor(
             keyboardHandler.queue.emit(KeyboardMessage.Text(text))
         }
     }
+
+    fun onDelete() {
+        viewModelScope.launch {
+            keyboardHandler.queue.emit(KeyboardMessage.Delete())
+        }
+    }
 }

@@ -69,12 +69,12 @@ class SlopboardKeyboardService :
                     }
 
                     is KeyboardMessage.Delete -> {
-                        val selectedText = currentInputConnection.getSelectedText(0)
-
-                        if (selectedText.isNotBlank()) {
-                            currentInputConnection.deleteSurroundingText(1, 0)
+                        val connection = currentInputConnection
+                        val selected = connection?.getSelectedText(0)
+                        if (!selected.isNullOrEmpty()) {
+                            connection.commitText("", 1)
                         } else {
-                            currentInputConnection.commitText("", 1)
+                            connection?.deleteSurroundingText(it.count, 0)
                         }
                     }
 

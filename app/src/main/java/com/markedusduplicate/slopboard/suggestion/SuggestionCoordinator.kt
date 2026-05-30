@@ -1,39 +1,69 @@
 package com.markedusduplicate.slopboard.suggestion
 
 import com.markedusduplicate.common.di.ApplicationCoroutineScope
+import com.markedusduplicate.slopboard.di.DbSuggestions
+import com.markedusduplicate.slopboard.di.LlmSuggestions
 import com.markedusduplicate.slopboard.keyboard.observe.InputContextTracker
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Bridges the live input context to the suggestion bar: debounces typing, cancels any in-flight
- * query when new input arrives ([mapLatest]), and surfaces the result as a [StateFlow] the UI
- * collects. Emits an empty list when suggestions aren't allowed (e.g. password fields).
+ * Bridges the live input context to the suggestion bar. Per debounced keystroke it emits the
+ * instant n-gram suggestions first, then replaces them with the LiteRT-LM suggestions once
+ * inference returns. [flatMapLatest] cancels any in-flight LLM call when new input arrives, and the
+ * result is surfaced as a [StateFlow] the UI collects. Emits an empty list when suggestions aren't
+ * allowed (e.g. password fields).
  */
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @Singleton
 class SuggestionCoordinator @Inject constructor(
     tracker: InputContextTracker,
-    source: SuggestionSource,
+    @DbSuggestions private val dbSource: SuggestionSource,
+    @LlmSuggestions private val llmSource: SuggestionSource,
     @ApplicationCoroutineScope scope: CoroutineScope,
 ) {
-    val suggestions: StateFlow<List<String>> =
+    val suggestions: StateFlow<Suggestions> =
         combine(tracker.textBeforeCursor, tracker.allowed) { text, allowed ->
             if (allowed) text else null
         }
             .debounce(DEBOUNCE_MS)
             .distinctUntilChanged()
-            .mapLatest { text -> if (text == null) emptyList() else source.suggest(text) }
-            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+            .flatMapLatest { text -> suggestionsFor(text) }
+            .stateIn(scope, SharingStarted.Eagerly, Suggestions.EMPTY)
+
+    private fun suggestionsFor(text: String?): Flow<Suggestions> {
+        if (text == null) return flowOf(Suggestions.EMPTY)
+        return flow {
+            val instant = dbSource.suggest(text)
+            emit(Suggestions(instant, fromLlm = false))
+            val refined = llmSource.suggest(text)
+            if (refined.isNotEmpty() && refined != instant) {
+                emit(Suggestions(refined, fromLlm = true))
+            }
+        }
+    }
 
     companion object {
         const val DEBOUNCE_MS = 300L
+    }
+}
+
+/** The current chips plus whether they came from the LLM (vs the instant n-gram source). */
+data class Suggestions(val words: List<String>, val fromLlm: Boolean) {
+    companion object {
+        val EMPTY = Suggestions(emptyList(), fromLlm = false)
     }
 }
