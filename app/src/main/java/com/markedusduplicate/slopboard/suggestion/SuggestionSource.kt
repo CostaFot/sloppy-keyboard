@@ -1,6 +1,8 @@
 package com.markedusduplicate.slopboard.suggestion
 
+import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.slopboard.keyboard.observe.TextContext
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -15,10 +17,12 @@ fun interface SuggestionSource {
 /** Suggestions from the user's personal n-gram / accepted-chip history. */
 class NgramSuggestionSource @Inject constructor(
     private val repository: PersonalizationRepository,
+    private val dispatcherProvider: DispatcherProvider,
 ) : SuggestionSource {
-    override suspend fun suggest(textBeforeCursor: String): List<String> {
-        val context = TextContext.predictionContext(textBeforeCursor)
-        val prefix = TextContext.currentPrefix(textBeforeCursor)
-        return repository.suggest(context, prefix)
-    }
+    override suspend fun suggest(textBeforeCursor: String): List<String> =
+        withContext(dispatcherProvider.default) {
+            val context = TextContext.predictionContext(textBeforeCursor)
+            val prefix = TextContext.currentPrefix(textBeforeCursor)
+            repository.suggest(context, prefix)
+        }
 }
