@@ -1,5 +1,6 @@
 package com.feelsokman.slopboard.keyboard
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,11 +26,7 @@ data object First
 
 data class Second(val id: String)
 
-/**
- * The keyboard's root view. [AbstractComposeView] manages its own [androidx.compose.runtime.Recomposer]
- * and composition, hooking into the view-tree lifecycle owner that [SlopboardKeyboardService] sets on
- * the window decor view — so there's no manual Recomposer wiring here.
- */
+@SuppressLint("ViewConstructor")
 class KeyboardComposeView(
     context: Context,
     private val keyboardStateHolder: KeyboardStateHolder,
@@ -38,7 +35,7 @@ class KeyboardComposeView(
     init {
         id = R.id.keyboardComposeView
         addOnAttachStateChangeListener(
-            object : View.OnAttachStateChangeListener {
+            object : OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
                     Timber.tag("KeyboardComposeView").d("onViewAttachedToWindow")
                 }
