@@ -92,6 +92,7 @@ class SlopboardKeyboardService :
 
     /** Snapshot the text left of the cursor and feed the learning + suggestion layers. */
     private fun refreshInputContext() {
+        logDebug { "refreshInputContext" }
         val before = currentInputConnection?.getTextBeforeCursor(CONTEXT_LOOKBACK, 0)?.toString() ?: ""
         inputContextTracker.updateText(before)
         observationManager.onTextBeforeCursor(before)
@@ -99,6 +100,7 @@ class SlopboardKeyboardService :
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
+        logDebug { "onStartInput" }
         inputContextTracker.onStartInput(info)
         observationManager.reset()
         refreshInputContext()

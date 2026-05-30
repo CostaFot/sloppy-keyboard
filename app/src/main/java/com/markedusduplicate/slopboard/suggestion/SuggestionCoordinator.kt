@@ -3,8 +3,6 @@ package com.markedusduplicate.slopboard.suggestion
 import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.slopboard.keyboard.observe.InputContextTracker
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +19,6 @@ import javax.inject.Singleton
  * query when new input arrives ([mapLatest]), and surfaces the result as a [StateFlow] the UI
  * collects. Emits an empty list when suggestions aren't allowed (e.g. password fields).
  */
-@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @Singleton
 class SuggestionCoordinator @Inject constructor(
     tracker: InputContextTracker,
