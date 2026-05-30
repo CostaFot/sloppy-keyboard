@@ -65,11 +65,12 @@ import com.feelsokman.common.NetworkMonitor
 import com.feelsokman.design.theme.AppTheme
 import com.feelsokman.logging.logDebug
 import com.feelsokman.slopboard.R
-import com.feelsokman.slopboard.retain.SampleRetainedViewModel
+import com.feelsokman.slopboard.retain.SampleEntryPoint
 import com.feelsokman.slopboard.retain.rememberRetainDecorator
 import com.feelsokman.slopboard.retain.rememberRetainedViewModel
 import com.feelsokman.slopboard.ui.activity.viewmodel.MainViewModel
 import com.feelsokman.slopboard.ui.activity.viewmodel.PullToRefreshViewModel
+import dagger.hilt.EntryPoints
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -149,7 +150,9 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 fun ContentGreen(goToSecondScreen: () -> Unit) {
-    val retainedViewModel = rememberRetainedViewModel<SampleRetainedViewModel>()
+    val retainedViewModel = rememberRetainedViewModel { context ->
+        EntryPoints.get(context, SampleEntryPoint::class.java).sampleRetainedViewModel()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -178,7 +181,9 @@ fun ContentGreen(goToSecondScreen: () -> Unit) {
 fun ContentBlue(
     text: String
 ) {
-    val retainedViewModel = rememberRetainedViewModel<SampleRetainedViewModel>()
+    val retainedViewModel = rememberRetainedViewModel { context ->
+        EntryPoints.get(context, SampleEntryPoint::class.java).sampleRetainedViewModel()
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -198,7 +203,9 @@ fun ContentBlue(
 private fun MainScreen(
     viewModel: PullToRefreshViewModel = hiltViewModel()
 ) {
-    val ff = rememberRetainedViewModel<SampleRetainedViewModel>()
+    val ff = rememberRetainedViewModel { context ->
+        EntryPoints.get(context, SampleEntryPoint::class.java).sampleRetainedViewModel()
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()

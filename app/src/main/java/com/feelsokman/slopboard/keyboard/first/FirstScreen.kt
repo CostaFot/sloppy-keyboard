@@ -36,7 +36,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.feelsokman.slopboard.keyboard.customViewModel
+import com.feelsokman.slopboard.retain.rememberRetainedViewModel
+import dagger.hilt.android.EntryPointAccessors
 import timber.log.Timber
 
 // Define colors at the top level for reusability
@@ -49,7 +50,10 @@ private val ButtonBackgroundColor = Color(0xFF6C6565) // Medium Gray for contras
 fun FirstScreen(
     goNext: () -> Unit
 ) {
-    val firstViewModel = customViewModel<FirstViewModel>()
+    val firstViewModel = rememberRetainedViewModel { context ->
+        EntryPointAccessors.fromApplication(context, FirstViewModelEntryPoint::class.java)
+            .firstViewModel()
+    }
 
     InnerFirstScreenContent(
         goNext = goNext,

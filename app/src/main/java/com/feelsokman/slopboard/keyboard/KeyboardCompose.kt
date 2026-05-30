@@ -27,6 +27,7 @@ import com.feelsokman.design.theme.AppTheme
 import com.feelsokman.slopboard.R
 import com.feelsokman.slopboard.keyboard.first.FirstScreen
 import com.feelsokman.slopboard.keyboard.second.SecondScreen
+import com.feelsokman.slopboard.retain.rememberRetainDecorator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -96,7 +97,6 @@ private fun ComposeView.setMainContent(
     setContent {
         CompositionLocalProvider(
             LocalNavigationEventDispatcherOwner provides FakeNavigationEventDispatcherOwner,
-            LocalCustomViewModelStoreOwner provides keyboardStateHolder,
         ) {
             AppTheme {
                 Surface(
@@ -105,7 +105,7 @@ private fun ComposeView.setMainContent(
                     val backStack = keyboardStateHolder.backStack
 
                     NavDisplay(
-                        entryDecorators = listOf(keyboardStateHolder.keyboardNavEntryDecorator),
+                        entryDecorators = listOf(rememberRetainDecorator()),
                         backStack = backStack,
                         onBack = { backStack.removeLastOrNull() },
                         entryProvider = entryProvider {

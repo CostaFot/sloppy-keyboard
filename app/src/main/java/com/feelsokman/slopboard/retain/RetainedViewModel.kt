@@ -1,5 +1,6 @@
 package com.feelsokman.slopboard.retain
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.retain.RetainObserver
 import androidx.compose.runtime.retain.retain
@@ -7,7 +8,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.feelsokman.logging.logDebug
 import com.feelsokman.slopboard.ui.Hello
 import dagger.hilt.EntryPoint
-import dagger.hilt.EntryPoints
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
-import kotlin.reflect.KClass
 
 abstract class RetainedViewModel : RetainObserver {
     val viewModelScope: CoroutineScope =
@@ -55,36 +54,19 @@ abstract class RetainedViewModel : RetainObserver {
     }
 }
 
-interface RetainedViewModelEntryPoint<T : RetainedViewModel> {
-    fun create(): T
+@Composable
+inline fun <reified T : RetainedViewModel> rememberRetainedViewModel(noinline factory: (Context) -> T): T {
+    val context = LocalContext.current
+    return retain { factory(context) }
 }
-
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class RetainedEntryPoint(
-    val value: KClass<out Any>,
-)
 
 @EntryPoint
 // can only work with ActivityComponent
 @InstallIn(ActivityComponent::class)
-interface SampleEntryPoint : RetainedViewModelEntryPoint<SampleRetainedViewModel>
-
-@Composable
-inline fun <reified T : RetainedViewModel> rememberRetainedViewModel(): T {
-    val context = LocalContext.current
-    return retain {
-        val annotation =
-            T::class.java.getAnnotation(RetainedEntryPoint::class.java)
-                ?: error("${T::class} must be annotated with @RetainedEntryPoint")
-
-        val entryPointClass = annotation.value.java
-        val entryPoint = EntryPoints.get(context, entryPointClass) as RetainedViewModelEntryPoint<T>
-        entryPoint.create()
-    }
+interface SampleEntryPoint {
+    fun sampleRetainedViewModel(): SampleRetainedViewModel
 }
 
-@RetainedEntryPoint(SampleEntryPoint::class)
 class SampleRetainedViewModel @Inject constructor(
     private val hello: Hello
 ) : RetainedViewModel() {

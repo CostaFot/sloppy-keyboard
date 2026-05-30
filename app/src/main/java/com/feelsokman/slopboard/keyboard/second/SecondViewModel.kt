@@ -1,10 +1,19 @@
 package com.feelsokman.slopboard.keyboard.second
 
 import com.feelsokman.logging.logDebug
-import com.feelsokman.slopboard.keyboard.CustomViewModel
+import com.feelsokman.slopboard.retain.RetainedViewModel
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import javax.inject.Inject
 
-class SecondViewModel @Inject constructor() : CustomViewModel() {
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SecondViewModelEntryPoint {
+    fun secondViewModel(): SecondViewModel
+}
+
+class SecondViewModel @Inject constructor() : RetainedViewModel() {
 
     init {
         logDebug { "SecondViewModel init ${hashCode()}" }
