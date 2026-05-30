@@ -62,7 +62,8 @@ engine, so after pushing a new model `am force-stop` (or reinstall) to reload it
 ### Navigation — Navigation 3
 
 - The keyboard back stack lives in `KeyboardStateHolder.backStack` (`mutableStateListOf<Any>`),
-  rendered by `NavDisplay`. Screens: `keyboard/first` and `keyboard/second`.
+  rendered by `NavDisplay`. A single route `KeyboardRoute` → `keyboard/main/KeyboardScreen` (the
+  `NavDisplay` is kept so more screens can be added later).
 
 ### Retained view models — `retain/`
 

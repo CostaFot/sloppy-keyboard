@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,16 +20,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.markedusduplicate.design.theme.AppTheme
 import com.markedusduplicate.slopboard.retain.rememberRetainedViewModel
 import com.markedusduplicate.slopboard.suggestion.Suggestions
 import dagger.hilt.android.EntryPointAccessors
 
-private val NgramChipColor = Color(0xFF6C6565)
-private val LlmChipColor = Color(0xFF5C6BC0)
-
 /**
- * The three predictive-text chips rendered above the key grid. Collapses to nothing when there
- * is no suggestion for the current context.
+ * The three predictive-text chips rendered above the key grid. Collapses to nothing when there is
+ * no suggestion for the current context. n-gram suggestions use the secondary container; LLM
+ * suggestions use the primary container so they stand out as model predictions.
  */
 @Composable
 fun SuggestionBar(modifier: Modifier = Modifier) {
@@ -53,20 +53,24 @@ private fun SuggestionBarContent(
 ) {
     if (suggestions.words.isEmpty()) return
 
-    val chipColor = if (suggestions.fromLlm) LlmChipColor else NgramChipColor
+    val scheme = MaterialTheme.colorScheme
+    val color = if (suggestions.fromLlm) scheme.primaryContainer else scheme.secondaryContainer
+    val contentColor =
+        if (suggestions.fromLlm) scheme.onPrimaryContainer else scheme.onSecondaryContainer
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(44.dp)
             .padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         suggestions.words.forEach { word ->
             SuggestionChip(
                 word = word,
-                color = chipColor,
+                color = color,
+                contentColor = contentColor,
                 onClick = { onAccept(word) },
                 modifier = Modifier.weight(1f),
             )
@@ -78,6 +82,7 @@ private fun SuggestionBarContent(
 private fun SuggestionChip(
     word: String,
     color: Color,
+    contentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -86,6 +91,7 @@ private fun SuggestionChip(
         modifier = modifier.height(36.dp),
         shape = RoundedCornerShape(10.dp),
         color = color,
+        contentColor = contentColor,
     ) {
         Row(
             modifier = Modifier
@@ -96,7 +102,6 @@ private fun SuggestionChip(
         ) {
             Text(
                 text = word,
-                color = Color.White,
                 fontSize = 15.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -109,17 +114,21 @@ private fun SuggestionChip(
 @Preview
 @Composable
 private fun NgramSuggestionBarPreview() {
-    SuggestionBarContent(
-        suggestions = Suggestions(listOf("hell", "heck", "help"), fromLlm = false),
-        onAccept = {},
-    )
+    AppTheme {
+        SuggestionBarContent(
+            suggestions = Suggestions(listOf("hell", "heck", "help"), fromLlm = false),
+            onAccept = {},
+        )
+    }
 }
 
 @Preview
 @Composable
 private fun LlmSuggestionBarPreview() {
-    SuggestionBarContent(
-        suggestions = Suggestions(listOf("hell", "heck", "help"), fromLlm = true),
-        onAccept = {},
-    )
+    AppTheme {
+        SuggestionBarContent(
+            suggestions = Suggestions(listOf("hell", "heck", "help"), fromLlm = true),
+            onAccept = {},
+        )
+    }
 }

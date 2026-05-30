@@ -17,14 +17,11 @@ import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import com.markedusduplicate.design.theme.AppTheme
 import com.markedusduplicate.slopboard.R
-import com.markedusduplicate.slopboard.keyboard.first.FirstScreen
-import com.markedusduplicate.slopboard.keyboard.second.SecondScreen
+import com.markedusduplicate.slopboard.keyboard.main.KeyboardScreen
 import com.markedusduplicate.slopboard.retain.rememberRetainDecorator
 import timber.log.Timber
 
-data object First
-
-data class Second(val id: String)
+data object KeyboardRoute
 
 @SuppressLint("ViewConstructor")
 class KeyboardComposeView(
@@ -63,19 +60,8 @@ class KeyboardComposeView(
                         backStack = backStack,
                         onBack = { backStack.removeLastOrNull() },
                         entryProvider = entryProvider {
-                            entry<First> {
-                                FirstScreen(
-                                    goNext = {
-                                        backStack.add(Second("123"))
-                                    }
-                                )
-                            }
-                            entry<Second> { key ->
-                                SecondScreen(
-                                    goBack = {
-                                        backStack.removeLastOrNull()
-                                    }
-                                )
+                            entry<KeyboardRoute> {
+                                KeyboardScreen()
                             }
                         }
                     )

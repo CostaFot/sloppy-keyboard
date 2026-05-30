@@ -1,4 +1,4 @@
-package com.markedusduplicate.slopboard.keyboard.first
+package com.markedusduplicate.slopboard.keyboard.main
 
 import com.markedusduplicate.logging.logDebug
 import com.markedusduplicate.slopboard.keyboard.KeyboardHandler
@@ -12,21 +12,21 @@ import javax.inject.Inject
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
-interface FirstViewModelEntryPoint {
-    fun firstViewModel(): FirstViewModel
+interface KeyboardViewModelEntryPoint {
+    fun keyboardViewModel(): KeyboardViewModel
 }
 
-class FirstViewModel @Inject constructor(
+class KeyboardViewModel @Inject constructor(
     private val keyboardHandler: KeyboardHandler,
 ) : RetainedViewModel() {
 
     init {
-        logDebug { "FirstViewModel init ${hashCode()}" }
+        logDebug { "KeyboardViewModel init ${hashCode()}" }
     }
 
     override fun onCleared() {
         super.onCleared()
-        logDebug { "FirstViewModel cleared ${hashCode()}" }
+        logDebug { "KeyboardViewModel cleared ${hashCode()}" }
     }
 
     fun onText(text: String) {
