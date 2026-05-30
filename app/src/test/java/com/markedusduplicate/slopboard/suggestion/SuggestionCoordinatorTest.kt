@@ -4,7 +4,6 @@ import com.markedusduplicate.slopboard.CoroutinesTestRule
 import com.markedusduplicate.slopboard.keyboard.observe.InputContextTracker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -16,7 +15,7 @@ import org.junit.Test
 class SuggestionCoordinatorTest {
 
     @get:Rule
-    val coroutinesTestRule = CoroutinesTestRule()
+    val coroutinesTestRule = CoroutinesTestRule(eager = false)
 
     @Test
     fun `query is debounced and reflects the latest input`() =
@@ -24,8 +23,7 @@ class SuggestionCoordinatorTest {
             val tracker = InputContextTracker()
             val calls = mutableListOf<String>()
             val source = SuggestionSource { text -> calls.add(text); listOf("x") }
-            val coordinator =
-                SuggestionCoordinator(tracker, source, coroutinesTestRule.testDispatcherProvider)
+            val coordinator = SuggestionCoordinator(tracker, source, backgroundScope)
 
             tracker.updateText("hello ")
             advanceTimeBy(200)
@@ -45,13 +43,14 @@ class SuggestionCoordinatorTest {
             val tracker = InputContextTracker()
             val calls = mutableListOf<String>()
             val source = SuggestionSource { text -> calls.add(text); listOf(text.trim()) }
-            val coordinator =
-                SuggestionCoordinator(tracker, source, coroutinesTestRule.testDispatcherProvider)
+            val coordinator = SuggestionCoordinator(tracker, source, backgroundScope)
 
             tracker.updateText("foo ")
-            advanceUntilIdle()
+            advanceTimeBy(SuggestionCoordinator.DEBOUNCE_MS + 1)
+            runCurrent()
             tracker.updateText("foo bar ")
-            advanceUntilIdle()
+            advanceTimeBy(SuggestionCoordinator.DEBOUNCE_MS + 1)
+            runCurrent()
 
             assertEquals(listOf("foo ", "foo bar "), calls)
             assertEquals(listOf("foo bar"), coordinator.suggestions.value)

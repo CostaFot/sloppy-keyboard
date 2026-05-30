@@ -1,9 +1,8 @@
 package com.markedusduplicate.slopboard.suggestion
 
-import com.markedusduplicate.common.coroutine.DispatcherProvider
+import com.markedusduplicate.common.di.ApplicationCoroutineScope
 import com.markedusduplicate.slopboard.keyboard.observe.InputContextTracker
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -23,10 +22,8 @@ import javax.inject.Singleton
 class SuggestionCoordinator @Inject constructor(
     tracker: InputContextTracker,
     source: SuggestionSource,
-    dispatcherProvider: DispatcherProvider,
+    @ApplicationCoroutineScope scope: CoroutineScope,
 ) {
-    private val scope = CoroutineScope(dispatcherProvider.default + SupervisorJob())
-
     val suggestions: StateFlow<List<String>> =
         combine(tracker.textBeforeCursor, tracker.allowed) { text, allowed ->
             if (allowed) text else null

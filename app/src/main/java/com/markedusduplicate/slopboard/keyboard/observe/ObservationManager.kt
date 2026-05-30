@@ -1,10 +1,9 @@
 package com.markedusduplicate.slopboard.keyboard.observe
 
-import com.markedusduplicate.common.coroutine.DispatcherProvider
+import com.markedusduplicate.common.di.ApplicationCoroutineScope
 import com.markedusduplicate.slopboard.keyboard.observe.TextContext.CONTEXT_WORDS
 import com.markedusduplicate.slopboard.suggestion.PersonalizationRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,10 +23,8 @@ import javax.inject.Singleton
 class ObservationManager @Inject constructor(
     private val repository: PersonalizationRepository,
     private val tracker: InputContextTracker,
-    dispatcherProvider: DispatcherProvider,
+    @ApplicationCoroutineScope private val scope: CoroutineScope,
 ) {
-    private val scope = CoroutineScope(dispatcherProvider.io + SupervisorJob())
-
     private var lastFinalized: List<String> = emptyList()
     private var pendingCorrection: PendingCorrection? = null
 
@@ -61,7 +58,6 @@ class ObservationManager @Inject constructor(
             }
 
             finalized.size < lastFinalized.size && sharesPrefix(lastFinalized, finalized) -> {
-                // A finalized word was removed by backspace; remember it as a correction source.
                 val idx = finalized.size
                 pendingCorrection = PendingCorrection(
                     context = contextKeyAt(lastFinalized, idx),

@@ -6,14 +6,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
+/**
+ * Swaps the main dispatcher for a [TestDispatcher] for the duration of a test.
+ *
+ * Pass `eager = true` (default) for an [UnconfinedTestDispatcher] that runs coroutines immediately
+ * (best for hot flows and fire-and-forget launches), or `eager = false` for a
+ * [StandardTestDispatcher] whose virtual clock must be advanced manually.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CoroutinesTestRule(
-    val testDispatcher: TestDispatcher = StandardTestDispatcher(),
+    eager: Boolean = true,
+    val testDispatcher: TestDispatcher =
+        if (eager) UnconfinedTestDispatcher() else StandardTestDispatcher(),
 ) : TestWatcher() {
 
     val testDispatcherProvider = object : DispatcherProvider {

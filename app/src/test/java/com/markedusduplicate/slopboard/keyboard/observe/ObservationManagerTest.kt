@@ -17,7 +17,7 @@ import org.junit.Test
 class ObservationManagerTest {
 
     @get:Rule
-    val coroutinesTestRule = CoroutinesTestRule()
+    val coroutinesTestRule = CoroutinesTestRule(eager = false)
 
     private fun repository(dao: FakeSuggestionDao) =
         PersonalizationRepository(dao, coroutinesTestRule.testDispatcherProvider)
@@ -25,9 +25,7 @@ class ObservationManagerTest {
     @Test
     fun `learns ngrams as words are finalized`() = runTest {
         val dao = FakeSuggestionDao()
-        val tracker = InputContextTracker()
-        val manager =
-            ObservationManager(repository(dao), tracker, coroutinesTestRule.testDispatcherProvider)
+        val manager = ObservationManager(repository(dao), InputContextTracker(), this)
 
         manager.onTextBeforeCursor("what ")
         manager.onTextBeforeCursor("what the ")
@@ -40,20 +38,18 @@ class ObservationManagerTest {
     }
 
     @Test
-    fun `records a correction when a finalized word is replaced`() =
-        runTest {
-            val dao = FakeSuggestionDao()
-            val tracker = InputContextTracker()
-            val manager =
-                ObservationManager(repository(dao), tracker, coroutinesTestRule.testDispatcherProvider)
+    fun `records a correction when a finalized word is replaced`() = runTest {
+        val dao = FakeSuggestionDao()
+        val manager = ObservationManager(repository(dao), InputContextTracker(), this)
 
-            manager.onTextBeforeCursor("the cat ")
-            manager.onTextBeforeCursor("the ")
-            manager.onTextBeforeCursor("the dog ")
-            advanceUntilIdle()
+        manager.onTextBeforeCursor("the cat ")
+        manager.onTextBeforeCursor("the ")
+        manager.onTextBeforeCursor("the dog ")
 
-            assertEquals(1, dao.corrections.getValue("cat" to "dog"))
-        }
+        advanceUntilIdle()
+
+        assertEquals(1, dao.corrections.getValue("cat" to "dog"))
+    }
 
     @Test
     fun `learns nothing in a password field`() = runTest {
@@ -63,11 +59,9 @@ class ObservationManagerTest {
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             })
         }
-        val manager =
-            ObservationManager(repository(dao), tracker, coroutinesTestRule.testDispatcherProvider)
+        val manager = ObservationManager(repository(dao), tracker, this)
 
         manager.onTextBeforeCursor("hunter two ")
-        advanceUntilIdle()
 
         assertTrue(dao.ngrams.isEmpty())
     }

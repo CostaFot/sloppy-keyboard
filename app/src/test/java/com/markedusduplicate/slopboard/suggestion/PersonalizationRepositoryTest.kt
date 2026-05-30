@@ -12,7 +12,7 @@ import org.junit.Test
 class PersonalizationRepositoryTest {
 
     @get:Rule
-    val coroutinesTestRule = CoroutinesTestRule()
+    val coroutinesTestRule = CoroutinesTestRule(eager = true)
 
     private fun repo(dao: FakeSuggestionDao) =
         PersonalizationRepository(dao, coroutinesTestRule.testDispatcherProvider)
