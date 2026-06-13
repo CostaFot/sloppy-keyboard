@@ -21,6 +21,9 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.logging.logDebug
 import com.markedusduplicate.slopboard.accessibility.ScreenshotCapturer
+import com.markedusduplicate.slopboard.agent.AgentEngine
+import com.markedusduplicate.slopboard.agent.AgentOverlayView
+import com.markedusduplicate.slopboard.agent.AgentState
 import com.markedusduplicate.slopboard.suggestion.llm.ClippyPrompt
 import com.markedusduplicate.slopboard.suggestion.llm.LlmEngine
 import dagger.hilt.android.AndroidEntryPoint
@@ -66,6 +69,9 @@ class ClippyOverlayService :
     @Inject
     lateinit var dispatcherProvider: DispatcherProvider
 
+    @Inject
+    lateinit var agentEngine: AgentEngine
+
     private val lifecycleRegistry = LifecycleRegistry(this)
     override val lifecycle: Lifecycle get() = lifecycleRegistry
 
@@ -103,8 +109,25 @@ class ClippyOverlayService :
         overlayParams(Gravity.LEFT or Gravity.CENTER_VERTICAL, x = 0, y = 0)
     }
 
+    // Full-screen so the highlight box can be drawn at any element's screen coordinates. Pass-through
+    // (FLAG_NOT_TOUCHABLE) by default; made touchable only while a suggestion is showing.
+    private val agentOverlayParams by lazy {
+        WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.TOP or Gravity.START }
+    }
+
     private var overlayView: ClippyComposeView? = null
     private var edgeHandleView: ClippyEdgeHandleView? = null
+    private var agentOverlayView: AgentOverlayView? = null
+    private var agentOverlayAdded = false
     private var tapJob: Job? = null
     private var autoHideJob: Job? = null
 
@@ -131,9 +154,16 @@ class ClippyOverlayService :
         overlayView = view
         windowManager.addView(view, layoutParams)
 
-        val handle = ClippyEdgeHandleView(this, onSummon = ::roastNow).also(::attachOwners)
+        val handle = ClippyEdgeHandleView(
+            context = this,
+            onSummon = ::roastNow,
+            onOpenAgent = agentEngine::start,
+        ).also(::attachOwners)
         edgeHandleView = handle
         windowManager.addView(handle, handleParams)
+
+        agentOverlayView = AgentOverlayView(this, agentEngine).also(::attachOwners)
+        scope.launch { agentEngine.state.collect(::applyAgentState) }
 
         isRunning = true
         logDebug { "clippy overlay + edge handle added" }
@@ -144,6 +174,36 @@ class ClippyOverlayService :
         view.setViewTreeLifecycleOwner(this)
         view.setViewTreeViewModelStoreOwner(this)
         view.setViewTreeSavedStateRegistryOwner(this)
+    }
+
+    /** Add/remove the agent overlay window and tune touch/visibility as the suggestion loop runs. */
+    private fun applyAgentState(st: AgentState) {
+        val overlay = agentOverlayView ?: return
+        if (st == AgentState.Idle) {
+            if (agentOverlayAdded) {
+                runCatching { windowManager.removeView(overlay) }
+                agentOverlayAdded = false
+            }
+            return
+        }
+        if (!agentOverlayAdded) {
+            windowManager.addView(overlay, agentOverlayParams)
+            agentOverlayAdded = true
+        }
+        // Touchable only when there's something to tap (a suggestion / a result); pass-through while
+        // thinking, and hidden while acting so the injected tap lands on the app beneath, not on us.
+        setAgentTouchable(st is AgentState.Suggest || st is AgentState.Done || st is AgentState.Failed)
+        val acting = st == AgentState.Acting
+        overlay.visibility = if (acting) android.view.View.GONE else android.view.View.VISIBLE
+        edgeHandleView?.visibility = if (acting) android.view.View.GONE else android.view.View.VISIBLE
+    }
+
+    private fun setAgentTouchable(touchable: Boolean) {
+        val overlay = agentOverlayView ?: return
+        val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        agentOverlayParams.flags =
+            if (touchable) agentOverlayParams.flags and flag.inv() else agentOverlayParams.flags or flag
+        if (agentOverlayAdded) windowManager.updateViewLayout(overlay, agentOverlayParams)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
@@ -206,10 +266,14 @@ class ClippyOverlayService :
         isRunning = false
         tapJob?.cancel()
         autoHideJob?.cancel()
+        agentEngine.close()
         overlayView?.let { runCatching { windowManager.removeView(it) } }
         edgeHandleView?.let { runCatching { windowManager.removeView(it) } }
+        agentOverlayView?.let { if (agentOverlayAdded) runCatching { windowManager.removeView(it) } }
         overlayView = null
         edgeHandleView = null
+        agentOverlayView = null
+        agentOverlayAdded = false
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         viewModelStore.clear()
         scope.cancel()

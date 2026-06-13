@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Rect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.unit.dp
 import com.markedusduplicate.design.theme.AppTheme
+import com.markedusduplicate.slopboard.R
 
 /**
  * A slim, always-present tab pinned to the left edge. A left→right swipe across it summons Clippy
@@ -33,9 +35,11 @@ import com.markedusduplicate.design.theme.AppTheme
 class ClippyEdgeHandleView(
     context: Context,
     private val onSummon: () -> Unit,
+    private val onOpenAgent: () -> Unit,
 ) : AbstractComposeView(context) {
 
     init {
+        id = R.id.clippyEdgeHandleView
         addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
             systemGestureExclusionRects = listOf(Rect(0, 0, right - left, bottom - top))
         }
@@ -48,6 +52,7 @@ class ClippyEdgeHandleView(
                 modifier = Modifier
                     .width(36.dp)
                     .height(140.dp)
+                    .pointerInput(Unit) { detectTapGestures(onLongPress = { onOpenAgent() }) }
                     .pointerInput(Unit) {
                         val threshold = 48.dp.toPx()
                         var total = 0f

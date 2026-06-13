@@ -67,6 +67,23 @@ class LlmEngine @Inject constructor(
             }
         }
 
+    /**
+     * One-shot text generation: sends [prompt] to the model and returns the raw reply, or null if the
+     * engine isn't ready or inference fails. Runs on IO, so it's safe to call from any context.
+     */
+    suspend fun generate(prompt: String): String? =
+        withContext(dispatcherProvider.io) {
+            val activeEngine = engineOrNull() ?: return@withContext null
+            runCatching {
+                activeEngine.createConversation().use { conversation ->
+                    conversation.sendMessage(Contents.of(Content.Text(prompt))).toString()
+                }
+            }.getOrElse {
+                logDebug { "text inference failed: ${it.message}" }
+                null
+            }
+        }
+
     private fun initialize(): Engine? {
         val modelPath = resolveModelPath() ?: return null
         for (backend in backends()) {
