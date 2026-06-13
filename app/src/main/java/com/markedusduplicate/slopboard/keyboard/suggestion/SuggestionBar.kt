@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.EmojiEmotions
@@ -46,9 +48,9 @@ private val STRIP_HEIGHT = 48.dp
 
 /**
  * The strip above the key grid. When there are predictions it shows up to three tappable chips
- * (n-gram = secondary container, LLM = primary container so model predictions stand out); when
- * idle it shows a Gboard-style tools row. Most tools are placeholders for now — the settings cog
- * opens the keyboard's setup screen.
+ * (n-gram = secondary container; LLM = primary container plus a leading ✨ icon so model
+ * predictions are unmistakable); when idle it shows a Gboard-style tools row. Most tools are
+ * placeholders for now — the settings cog opens the keyboard's setup screen.
  */
 @Composable
 fun SuggestionBar(modifier: Modifier = Modifier) {
@@ -92,6 +94,7 @@ private fun SuggestionChips(
     val color = if (suggestions.fromLlm) scheme.primaryContainer else scheme.secondaryContainer
     val contentColor =
         if (suggestions.fromLlm) scheme.onPrimaryContainer else scheme.onSecondaryContainer
+    val leadingIcon = if (suggestions.fromLlm) Icons.Filled.AutoAwesome else null
 
     Row(
         modifier = modifier,
@@ -103,6 +106,7 @@ private fun SuggestionChips(
                 word = word,
                 color = color,
                 contentColor = contentColor,
+                leadingIcon = leadingIcon,
                 onClick = { onAccept(word) },
                 modifier = Modifier.weight(1f),
             )
@@ -149,6 +153,7 @@ private fun SuggestionChip(
     word: String,
     color: Color,
     contentColor: Color,
+    leadingIcon: ImageVector?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -163,9 +168,16 @@ private fun SuggestionChip(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = "AI suggestion",
+                    modifier = Modifier.size(14.dp),
+                )
+            }
             Text(
                 text = word,
                 fontSize = 15.sp,
