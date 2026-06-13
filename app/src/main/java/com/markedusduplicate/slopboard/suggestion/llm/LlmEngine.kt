@@ -80,11 +80,19 @@ class LlmEngine @Inject constructor(
     private fun cpuThreads(): Int =
         Runtime.getRuntime().availableProcessors().coerceIn(1, MAX_CPU_THREADS)
 
-    private fun resolveModelPath(): String? =
-        context.getExternalFilesDir(MODELS_DIR)
+    private fun resolveModelPath(): String? {
+        val path = context.getExternalFilesDir(MODELS_DIR)
             ?.listFiles { file -> file.isFile && file.name.endsWith(MODEL_EXTENSION) }
             ?.firstOrNull()
             ?.absolutePath
+
+        if (path.isNullOrBlank()) {
+            logDebug { "Model not found in files, did you forget to install it?" }
+        }
+
+        return path
+
+    }
 
     private companion object {
         const val MODELS_DIR = "models"
