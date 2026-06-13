@@ -29,4 +29,9 @@ sealed interface KeyboardRoute : NavKey {
     data object Gif : KeyboardRoute {
         override val label: String get() = "GIFs"
     }
+
+    @Serializable
+    data object Vision : KeyboardRoute {
+        override val label: String get() = "Vision"
+    }
 }

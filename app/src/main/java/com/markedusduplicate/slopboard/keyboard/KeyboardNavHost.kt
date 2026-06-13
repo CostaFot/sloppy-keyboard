@@ -15,6 +15,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.markedusduplicate.slopboard.keyboard.gif.GifScreen
 import com.markedusduplicate.slopboard.keyboard.main.KeyboardScreen
 import com.markedusduplicate.slopboard.keyboard.reply.SmartReplyScreen
+import com.markedusduplicate.slopboard.keyboard.vision.VisionScreen
 import com.markedusduplicate.slopboard.retain.rememberRetainDecorator
 
 /**
@@ -38,6 +39,9 @@ fun KeyboardNavHost(stateHolder: KeyboardStateHolder) {
                 entry<KeyboardRoute.Gif> {
                     GifScreen(onDone = { stateHolder.navigateTo(KeyboardRoute.Main) })
                 }
+                entry<KeyboardRoute.Vision> {
+                    VisionScreen(onDone = { stateHolder.navigateTo(KeyboardRoute.Main) })
+                }
             },
         )
     }
@@ -53,7 +57,7 @@ private fun DebugNavBar(current: KeyboardRoute?, onSelect: (KeyboardRoute) -> Un
     ) {
         // Listed inline (at composition time, where the route objects are fully constructed) rather
         // than via a companion registry, which would risk the sealed-object init-order trap.
-        for (route in listOf(KeyboardRoute.Main, KeyboardRoute.SmartReply, KeyboardRoute.Gif)) {
+        for (route in listOf(KeyboardRoute.Main, KeyboardRoute.SmartReply, KeyboardRoute.Gif, KeyboardRoute.Vision)) {
             FilterChip(
                 selected = current == route,
                 onClick = { onSelect(route) },

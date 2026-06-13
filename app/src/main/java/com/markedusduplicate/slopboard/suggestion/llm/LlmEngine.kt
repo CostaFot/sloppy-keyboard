@@ -2,6 +2,8 @@ package com.markedusduplicate.slopboard.suggestion.llm
 
 import android.content.Context
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.markedusduplicate.common.coroutine.DispatcherProvider
@@ -10,6 +12,7 @@ import com.markedusduplicate.logging.logDebug
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,6 +47,26 @@ class LlmEngine @Inject constructor(
         return engine
     }
 
+    /**
+     * One-shot multimodal generation: sends [jpeg] (image bytes) plus [prompt] to the model and
+     * returns the raw reply, or null if the engine isn't ready or inference fails. Runs on the IO
+     * dispatcher, so it's safe to call from any context.
+     */
+    suspend fun generateWithImage(jpeg: ByteArray, prompt: String): String? =
+        withContext(dispatcherProvider.io) {
+            val activeEngine = engineOrNull() ?: return@withContext null
+            runCatching {
+                activeEngine.createConversation().use { conversation ->
+                    conversation.sendMessage(
+                        Contents.of(Content.ImageBytes(jpeg), Content.Text(prompt)),
+                    ).toString()
+                }
+            }.getOrElse {
+                logDebug { "vision inference failed: ${it.message}" }
+                null
+            }
+        }
+
     private fun initialize(): Engine? {
         val modelPath = resolveModelPath() ?: return null
         for (backend in backends()) {
@@ -56,6 +79,7 @@ class LlmEngine @Inject constructor(
                         visionBackend = if (backend is Backend.GPU) Backend.GPU() else null,
                         audioBackend = if (backend is Backend.GPU) Backend.CPU() else null,
                         maxNumTokens = MAX_NUM_TOKENS,
+                        maxNumImages = MAX_NUM_IMAGES,
                         cacheDir = null,
                     ),
                 )
@@ -91,5 +115,6 @@ class LlmEngine @Inject constructor(
         const val MODEL_EXTENSION = ".litertlm"
         const val MAX_CPU_THREADS = 4
         const val MAX_NUM_TOKENS = 1024
+        const val MAX_NUM_IMAGES = 1
     }
 }
