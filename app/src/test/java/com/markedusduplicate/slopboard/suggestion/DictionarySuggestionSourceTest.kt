@@ -61,7 +61,25 @@ class DictionarySuggestionSourceTest {
         dao.ngrams["hello" to "world"] = 3
         dao.ngrams["hello" to "there"] = 1
         val result = source(dao).suggest("hello ")
-        assertEquals(listOf("world", "there"), result.words)
+        assertEquals(listOf("world", "there"), result.words.take(2))
+        assertNull(result.correction)
+    }
+
+    @Test
+    fun `an unknown context falls back to the users most-used words`() = runTest {
+        val dao = FakeSuggestionDao()
+        dao.ngrams["i" to "love"] = 5
+        dao.ngrams["you" to "love"] = 3 // "love" is the most-used word overall (8)
+        dao.ngrams["the" to "cat"] = 4
+        val result = source(dao).suggest("zzz ") // no n-grams learned for context "zzz"
+        assertEquals(listOf("love", "cat"), result.words.take(2))
+        assertNull(result.correction)
+    }
+
+    @Test
+    fun `with no personal history the boundary falls back to common dictionary words`() = runTest {
+        val result = source(FakeSuggestionDao()).suggest("zzz ")
+        assertEquals(listOf("the", "they"), result.words.take(2))
         assertNull(result.correction)
     }
 }

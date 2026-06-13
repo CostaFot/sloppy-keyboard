@@ -107,7 +107,9 @@ offline, so the keyboard is useful **even with no LLM model present**.
 - **`DictionarySuggestionSource`** — mid-word: completions (personal words first), and a
   `correction`
   **only when the prefix completes to nothing** (the typo signal), preferring a learned correction
-  from the DB over the dictionary guess. On a boundary: personal next-word n-grams.
+  from the DB over the dictionary guess. On a boundary: context next-word n-grams, backfilled with
+  the user's most-used words (`PersonalizationRepository.topWords` / `SuggestionDao.topWords`), then
+  the bundled dictionary's most common words (`WordIndex.topWords`) as a last resort.
 - **LLM source** — `LlmSuggestionSource` + `suggestion/llm/SuggestionPrompt.kt` (pure, no LiteRT
   types): completion+`fix` prompt mid-word, next-word array on a boundary; tolerant parse, single
   word per chip, casing follows the typed prefix (shared `suggestion/Casing.kt`).

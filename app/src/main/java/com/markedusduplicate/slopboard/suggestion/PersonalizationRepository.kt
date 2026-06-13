@@ -45,6 +45,12 @@ class PersonalizationRepository @Inject constructor(
             dao.topReplacements(original, FETCH_LIMIT)
         }
 
+    /** The user's most-used words across every context — a fallback when no context matches. */
+    suspend fun topWords(limit: Int): List<String> =
+        withContext(dispatcherProvider.io) {
+            dao.topWords(limit)
+        }
+
     /**
      * Up to [MAX_SUGGESTIONS] words for [context]: accepted chips first (a stronger signal than
      * passive typing), then frequent n-gram follow-ons. Deduped case-insensitively and, when the

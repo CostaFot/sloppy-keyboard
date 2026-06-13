@@ -25,6 +25,15 @@ class FakeSuggestionDao : SuggestionDao {
     override suspend fun topNextWords(context: String, limit: Int): List<String> =
         top(ngrams, context, limit)
 
+    override suspend fun topWords(limit: Int): List<String> =
+        ngrams.entries
+            .groupBy({ it.key.second }, { it.value })
+            .mapValues { (_, counts) -> counts.sum() }
+            .entries
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .take(limit)
+            .map { it.key }
+
     override suspend fun insertCorrectionIgnore(entry: UserCorrection): Long =
         insertIgnore(corrections, entry.original to entry.replacement)
 

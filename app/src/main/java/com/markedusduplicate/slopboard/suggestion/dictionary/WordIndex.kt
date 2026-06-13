@@ -20,7 +20,14 @@ class WordIndex(private val frequencies: Map<String, Long>) {
     private val byFirstChar: Map<Char, List<String>> =
         frequencies.keys.groupBy { it.first() }.mapValues { (_, words) -> words.sorted() }
 
+    /** The most frequent words overall, precomputed for a cheap global fallback. */
+    private val topByFrequency: List<String> =
+        frequencies.entries.sortedByDescending { it.value }.take(TOP_WORDS_CACHE).map { it.key }
+
     fun contains(word: String): Boolean = frequencies.containsKey(word.lowercase())
+
+    /** The globally most-frequent words — a last-resort next-word fallback. */
+    fun topWords(limit: Int): List<String> = if (limit <= 0) emptyList() else topByFrequency.take(limit)
 
     fun complete(prefix: String, limit: Int): List<String> {
         if (prefix.isEmpty() || limit <= 0) return emptyList()
@@ -85,5 +92,6 @@ class WordIndex(private val frequencies: Map<String, Long>) {
 
     private companion object {
         const val MAX_EDITS = 2
+        const val TOP_WORDS_CACHE = 64
     }
 }

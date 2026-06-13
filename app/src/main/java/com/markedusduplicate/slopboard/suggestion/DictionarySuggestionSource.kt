@@ -14,7 +14,8 @@ import javax.inject.Inject
  *   words ranked ahead of dictionary words. A spelling [Suggestions.correction] is offered only when
  *   the prefix completes to nothing (the signal it's a typo, not an unfinished word) — a learned
  *   correction wins over the dictionary's edit-distance guess.
- * - **On a boundary** (no prefix): the user's personal next-word n-grams (a plain dictionary can't
+ * - **On a boundary** (no prefix): the user's personal next-word n-grams for this context, backfilled
+ *   with the user's most-used words overall when the context has too few (a plain dictionary can't
  *   predict the next word — that's the LLM's job).
  *
  * Returns [Suggestions.EMPTY] until the dictionary has finished loading.
@@ -31,7 +32,9 @@ class DictionarySuggestionSource @Inject constructor(
             val context = TextContext.predictionContext(textBeforeCursor)
             if (prefix.isEmpty()) {
                 if (context.isBlank()) return@withContext Suggestions.EMPTY
-                Suggestions(personalization.suggest(context, ""))
+                val contextWords = personalization.suggest(context, "")
+                val lastWord = TextContext.finalizedWords(textBeforeCursor).lastOrNull()
+                Suggestions(fillNextWords(contextWords, lastWord))
             } else {
                 val index = dictionary.indexOrNull() ?: return@withContext Suggestions.EMPTY
                 val personal = personalization.suggest(context, prefix)
@@ -46,6 +49,36 @@ class DictionarySuggestionSource @Inject constructor(
                 assemble(prefix, correction, personal + completions)
             }
         }
+
+    /**
+     * Context next-words first, then the user's most-used words to fill the remaining slots (skipping
+     * the word just typed, to avoid suggesting it back). Deduped case-insensitively, capped.
+     */
+    private suspend fun fillNextWords(contextWords: List<String>, lastWord: String?): List<String> {
+        if (contextWords.size >= MAX_SUGGESTIONS) return contextWords
+        val seen = HashSet<String>()
+        val out = ArrayList<String>(MAX_SUGGESTIONS)
+        fun add(word: String) {
+            if (word.isEmpty() || out.size == MAX_SUGGESTIONS) return
+            if (seen.add(word.lowercase())) out.add(word)
+        }
+
+        fun backfill(words: List<String>) {
+            for (word in words) {
+                if (out.size == MAX_SUGGESTIONS) break
+                if (lastWord != null && word.equals(lastWord, ignoreCase = true)) continue
+                add(word)
+            }
+        }
+
+        contextWords.forEach(::add)
+        if (out.size < MAX_SUGGESTIONS) backfill(personalization.topWords(MAX_SUGGESTIONS + contextWords.size))
+        // Last resort for a user with no history yet: the most common words in the bundled dictionary.
+        if (out.size < MAX_SUGGESTIONS) {
+            dictionary.indexOrNull()?.let { backfill(it.topWords(MAX_SUGGESTIONS + out.size)) }
+        }
+        return out
+    }
 
     /** Correction first (when meaningful), then completions; deduped case-insensitively, capped. */
     private fun assemble(prefix: String, correction: String?, completions: List<String>): Suggestions {

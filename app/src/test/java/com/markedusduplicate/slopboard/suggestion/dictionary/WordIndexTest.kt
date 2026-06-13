@@ -53,4 +53,9 @@ class WordIndexTest {
     fun `far-apart words are not offered as corrections`() {
         assertTrue(index.correct("xyzzy", limit = 3).isEmpty())
     }
+
+    @Test
+    fun `top words are ranked by frequency`() {
+        assertEquals(listOf("the", "they", "there"), index.topWords(limit = 3))
+    }
 }
