@@ -10,15 +10,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AbstractComposeView
-import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import com.markedusduplicate.design.theme.AppTheme
 import com.markedusduplicate.slopboard.R
-import com.markedusduplicate.slopboard.keyboard.main.KeyboardScreen
-import com.markedusduplicate.slopboard.retain.rememberRetainDecorator
 import timber.log.Timber
 
 data object KeyboardRoute
@@ -53,18 +49,7 @@ class KeyboardComposeView(
                 Surface(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    val backStack = keyboardStateHolder.backStack
-
-                    NavDisplay(
-                        entryDecorators = listOf(rememberRetainDecorator()),
-                        backStack = backStack,
-                        onBack = { backStack.removeLastOrNull() },
-                        entryProvider = entryProvider {
-                            entry<KeyboardRoute> {
-                                KeyboardScreen()
-                            }
-                        }
-                    )
+                    KeyboardNavHost(keyboardStateHolder)
                 }
 
                 DisposableEffect(Unit) {
