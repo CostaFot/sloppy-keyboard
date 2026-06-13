@@ -1,5 +1,7 @@
 package com.markedusduplicate.slopboard.ui.activity
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.markedusduplicate.design.theme.AppTheme
 import com.markedusduplicate.logging.logDebug
+import com.markedusduplicate.slopboard.accessibility.SlopboardAccessibilityService
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -68,6 +71,7 @@ private fun SetupScreen() {
 
     var isEnabled by remember { mutableStateOf(false) }
     var isSelected by remember { mutableStateOf(false) }
+    var isAccessibilityEnabled by remember { mutableStateOf(false) }
 
     // Re-read status every time the Activity resumes, so returning from system
     // settings / the IME picker refreshes the indicators.
@@ -78,6 +82,7 @@ private fun SetupScreen() {
             context.contentResolver,
             Settings.Secure.DEFAULT_INPUT_METHOD,
         )?.startsWith(context.packageName) == true
+        isAccessibilityEnabled = isAccessibilityServiceEnabled(context)
         onPauseOrDispose {}
     }
 
@@ -99,6 +104,7 @@ private fun SetupScreen() {
 
         StatusRow(label = "Enabled", ok = isEnabled)
         StatusRow(label = "Selected as default", ok = isSelected)
+        StatusRow(label = "Screen context (accessibility)", ok = isAccessibilityEnabled)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -122,6 +128,17 @@ private fun SetupScreen() {
             Text(text = "2. Select slopboard")
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            },
+        ) {
+            Text(text = "3. Enable screen context")
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         var text by remember { mutableStateOf("") }
@@ -132,6 +149,15 @@ private fun SetupScreen() {
             modifier = Modifier.fillMaxWidth(),
         )
     }
+}
+
+private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val expected = ComponentName(context, SlopboardAccessibilityService::class.java)
+    val enabled = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+    ) ?: return false
+    return enabled.split(':').any { ComponentName.unflattenFromString(it) == expected }
 }
 
 @Composable
