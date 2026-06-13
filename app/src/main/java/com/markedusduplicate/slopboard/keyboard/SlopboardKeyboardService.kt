@@ -158,9 +158,13 @@ class SlopboardKeyboardService :
     private fun commitGif(message: KeyboardMessage.CommitGif) {
         val connection = currentInputConnection
         val editorInfo = currentInputEditorInfo
+        val supportedMimeTypes =
+            editorInfo?.let { EditorInfoCompat.getContentMimeTypes(it) } ?: emptyArray()
+        // compareMimeTypes(concrete, desired): OUR concrete "image/gif" must be first, since the
+        // field usually advertises the wildcard "image/*" (only the 2nd arg may be a pattern).
         val accepted = connection != null && editorInfo != null &&
-                EditorInfoCompat.getContentMimeTypes(editorInfo)
-                    .any { ClipDescription.compareMimeTypes(it, message.mimeType) }
+                supportedMimeTypes.any { ClipDescription.compareMimeTypes(message.mimeType, it) }
+        logDebug { "gif accepted=$accepted supported=${supportedMimeTypes.joinToString()}" }
         if (accepted) {
             val content = InputContentInfoCompat(
                 message.uri,
