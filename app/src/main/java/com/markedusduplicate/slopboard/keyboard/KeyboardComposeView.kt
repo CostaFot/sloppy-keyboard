@@ -17,8 +17,6 @@ import com.markedusduplicate.design.theme.AppTheme
 import com.markedusduplicate.slopboard.R
 import timber.log.Timber
 
-data object KeyboardRoute
-
 @SuppressLint("ViewConstructor")
 class KeyboardComposeView(
     context: Context,

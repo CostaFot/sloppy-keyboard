@@ -28,8 +28,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.markedusduplicate.slopboard.retain.rememberRetainedViewModel
 import dagger.hilt.android.EntryPointAccessors
 
-data object SmartReplyRoute
-
 /**
  * Reads the captured screen text, asks the LLM for one complete reply, and shows it in a big card.
  * Tapping the card inserts the reply into the field and returns to the keyboard ([onDone]).

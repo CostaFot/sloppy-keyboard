@@ -1,6 +1,7 @@
 package com.markedusduplicate.slopboard.keyboard.reply
 
 import com.markedusduplicate.common.coroutine.DispatcherProvider
+import com.markedusduplicate.logging.logDebug
 import com.markedusduplicate.slopboard.accessibility.ScreenContextHolder
 import com.markedusduplicate.slopboard.keyboard.KeyboardHandler
 import com.markedusduplicate.slopboard.keyboard.KeyboardMessage
@@ -43,6 +44,10 @@ class SmartReplyViewModel @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : RetainedViewModel() {
 
+    init {
+        logDebug { "SmartReplyViewModel init" }
+    }
+
     private val _state = MutableStateFlow<SmartReplyUiState>(SmartReplyUiState.Loading)
     val state: StateFlow<SmartReplyUiState> = _state.asStateFlow()
 
@@ -79,5 +84,10 @@ class SmartReplyViewModel @Inject constructor(
         viewModelScope.launch {
             keyboardHandler.queue.emit(KeyboardMessage.Text(reply))
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        logDebug { "SmartReplyViewModel onCleared" }
     }
 }

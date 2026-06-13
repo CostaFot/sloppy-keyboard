@@ -1,25 +1,25 @@
 package com.markedusduplicate.slopboard.keyboard
 
-import androidx.compose.runtime.mutableStateListOf
+import androidx.navigation3.runtime.NavBackStack
 import com.markedusduplicate.logging.logDebug
 import javax.inject.Inject
 
 class KeyboardStateHolder @Inject constructor() {
-    val backStack = mutableStateListOf<Any>(KeyboardRoute)
+    val backStack = NavBackStack<KeyboardRoute>(KeyboardRoute.Main)
 
     /** The route currently on top of the stack (observable when read in composition). */
-    val currentRoute: Any?
+    val currentRoute: KeyboardRoute?
         get() = backStack.lastOrNull()
 
     init {
         logDebug { "Init KeyboardStateHolder, id: ${hashCode()}" }
     }
 
-    /** Show [route] over a deterministic stack: keyboard at the root, [route] on top (if not it). */
-    fun navigateTo(route: Any) {
+    /** Show [route] over a deterministic stack: Main at the root, [route] on top (if not it). */
+    fun navigateTo(route: KeyboardRoute) {
         backStack.clear()
-        backStack.add(KeyboardRoute)
-        if (route != KeyboardRoute) backStack.add(route)
+        backStack.add(KeyboardRoute.Main)
+        if (route != KeyboardRoute.Main) backStack.add(route)
     }
 
     fun back() {

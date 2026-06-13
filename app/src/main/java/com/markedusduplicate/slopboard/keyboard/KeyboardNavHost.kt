@@ -13,30 +13,26 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.markedusduplicate.slopboard.keyboard.main.KeyboardScreen
-import com.markedusduplicate.slopboard.keyboard.reply.SmartReplyRoute
 import com.markedusduplicate.slopboard.keyboard.reply.SmartReplyScreen
 import com.markedusduplicate.slopboard.retain.rememberRetainDecorator
-
-private val DebugRoutes: List<Pair<String, Any>> =
-    listOf("Keyboard" to KeyboardRoute, "Reply" to SmartReplyRoute)
 
 /**
  * Wraps the keyboard's [NavDisplay] with a persistent debug nav bar so routes can be reached
  * directly while developing. Navigation lives on [KeyboardStateHolder]; this just wires its
- * functions to the bar's chips and each screen's `onDone` callback.
+ * functions to the bar's chips and each screen's `onDone`.
  */
 @Composable
 fun KeyboardNavHost(stateHolder: KeyboardStateHolder) {
     Column(modifier = Modifier.fillMaxWidth()) {
         DebugNavBar(current = stateHolder.currentRoute, onSelect = stateHolder::navigateTo)
         NavDisplay(
-            entryDecorators = listOf(rememberRetainDecorator()),
+            entryDecorators = listOf(rememberRetainDecorator<KeyboardRoute>()),
             backStack = stateHolder.backStack,
             onBack = { stateHolder.back() },
             entryProvider = entryProvider {
-                entry<KeyboardRoute> { KeyboardScreen() }
-                entry<SmartReplyRoute> {
-                    SmartReplyScreen(onDone = { stateHolder.navigateTo(KeyboardRoute) })
+                entry<KeyboardRoute.Main> { KeyboardScreen() }
+                entry<KeyboardRoute.SmartReply> {
+                    SmartReplyScreen(onDone = { stateHolder.navigateTo(KeyboardRoute.Main) })
                 }
             },
         )
@@ -44,18 +40,20 @@ fun KeyboardNavHost(stateHolder: KeyboardStateHolder) {
 }
 
 @Composable
-private fun DebugNavBar(current: Any?, onSelect: (Any) -> Unit) {
+private fun DebugNavBar(current: KeyboardRoute?, onSelect: (KeyboardRoute) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        DebugRoutes.forEach { (label, route) ->
+        // Listed inline (at composition time, where the route objects are fully constructed) rather
+        // than via a companion registry, which would risk the sealed-object init-order trap.
+        for (route in listOf(KeyboardRoute.Main, KeyboardRoute.SmartReply)) {
             FilterChip(
                 selected = current == route,
                 onClick = { onSelect(route) },
-                label = { Text(label) },
+                label = { Text(route.label) },
             )
         }
     }
