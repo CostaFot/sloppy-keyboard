@@ -2,38 +2,38 @@ package com.markedusduplicate.slopboard.suggestion
 
 import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.logging.logDebug
-import com.markedusduplicate.slopboard.keyboard.observe.TextContext
 import com.markedusduplicate.slopboard.suggestion.llm.LlmEngine
 import com.markedusduplicate.slopboard.suggestion.llm.SuggestionPrompt
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * Next-word suggestions from the local LiteRT-LM model, personalized by injecting the user's
- * n-gram hints into the prompt (RAG). Returns an empty list when no model is loaded or inference
- * fails, so the keyboard silently falls back to the n-gram source.
+ * Next-word prediction from the local LiteRT-LM model. Full-freedom: the model is given only the
+ * text so far and asked for the single next word — no personalization hints. Returns
+ * [Suggestions.EMPTY] when no model is loaded or inference fails, so the slot falls back to its
+ * placeholder rather than showing stale chips. (The coordinator only invokes this on a boundary.)
  */
 class LlmSuggestionSource @Inject constructor(
     private val engine: LlmEngine,
-    private val personalization: PersonalizationRepository,
     private val dispatcherProvider: DispatcherProvider,
 ) : SuggestionSource {
 
-    override suspend fun suggest(textBeforeCursor: String): List<String> =
+    override suspend fun suggest(textBeforeCursor: String): Suggestions =
         withContext(dispatcherProvider.io) {
-            val context = TextContext.predictionContext(textBeforeCursor)
-            if (context.isBlank()) return@withContext emptyList()
-            val activeEngine = engine.engineOrNull() ?: return@withContext emptyList()
+            if (textBeforeCursor.isBlank()) return@withContext Suggestions.EMPTY
+            val activeEngine = engine.engineOrNull() ?: return@withContext Suggestions.EMPTY
 
-            val hints = personalization.suggest(context, TextContext.currentPrefix(textBeforeCursor))
-            val prompt = SuggestionPrompt.build(textBeforeCursor, context, hints)
+            val prompt = SuggestionPrompt.nextWord(textBeforeCursor)
+            logDebug { "LLM prompt:\n$prompt" }
             try {
                 activeEngine.createConversation().use { conversation ->
-                    SuggestionPrompt.parse(conversation.sendMessage(prompt).toString())
+                    val reply = conversation.sendMessage(prompt).toString()
+                    logDebug { "LLM reply: $reply" }
+                    SuggestionPrompt.parse(reply)
                 }
             } catch (t: Throwable) {
                 logDebug { "LLM inference failed: ${t.message}" }
-                emptyList()
+                Suggestions.EMPTY
             }
         }
 }

@@ -7,7 +7,7 @@ import com.markedusduplicate.slopboard.keyboard.observe.TextContext
 import com.markedusduplicate.slopboard.retain.RetainedViewModel
 import com.markedusduplicate.slopboard.suggestion.PersonalizationRepository
 import com.markedusduplicate.slopboard.suggestion.SuggestionCoordinator
-import com.markedusduplicate.slopboard.suggestion.Suggestions
+import com.markedusduplicate.slopboard.suggestion.SuggestionState
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -28,7 +28,7 @@ class SuggestionViewModel @Inject constructor(
     private val keyboardHandler: KeyboardHandler,
 ) : RetainedViewModel() {
 
-    val suggestions: StateFlow<Suggestions> = coordinator.suggestions
+    val state: StateFlow<SuggestionState> = coordinator.state
 
     /** Insert the chip (replacing any in-progress word) and log it as an accepted suggestion. */
     fun onAccept(word: String) {

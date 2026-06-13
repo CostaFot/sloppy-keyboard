@@ -34,6 +34,11 @@ interface SuggestionDao {
     )
     suspend fun topNextWords(context: String, limit: Int): List<String>
 
+    @Query(
+        "SELECT nextWord FROM ngrams GROUP BY nextWord ORDER BY SUM(count) DESC, nextWord ASC LIMIT :limit"
+    )
+    suspend fun topWords(limit: Int): List<String>
+
     // --- corrections ---
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -48,6 +53,11 @@ interface SuggestionDao {
             bumpCorrection(original, replacement)
         }
     }
+
+    @Query(
+        "SELECT replacement FROM corrections WHERE original = :original ORDER BY count DESC, replacement ASC LIMIT :limit"
+    )
+    suspend fun topReplacements(original: String, limit: Int): List<String>
 
     // --- accepted suggestions ---
 

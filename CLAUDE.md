@@ -80,13 +80,52 @@ engine, so after pushing a new model `am force-stop` (or reinstall) to reload it
   into one component and can't implement the same generic interface twice. Use a plain
   interface with its own method per VM.
 
-## Predictive suggestions (DB + on-device LLM)
+## Predictive suggestions (hybrid: instant dictionary + on-device LLM refine)
 
-Two suggestion sources behind a `SuggestionSource` seam, blended in
-`suggestion/SuggestionCoordinator.kt`:
-the DB source shows instantly on each keystroke; the LLM source replaces it when inference returns
-(`flatMapLatest`, so typing cancels stale inference). Bound via Hilt qualifiers `@DbSuggestions`
-(`NgramSuggestionSource`) and `@LlmSuggestions` (`LlmSuggestionSource`).
+Two suggestion sources behind a `SuggestionSource` seam (returns `Suggestions`), shown in a **single
+mode-driven row** by `suggestion/SuggestionCoordinator.kt` — each engine drives the mode it's good
+at:
+
+- **`SuggestionMode.TYPING`** (mid-word): the dictionary's completions + spelling fix; the LLM is
+  **not** called mid-word.
+- **`SuggestionMode.NEXT_WORD`** (after a space): personal n-grams in the first slots, the LLM's
+  single next word in the last.
+
+A single debounced input is `shareIn`'d. The dictionary side (`mapLatest → stateIn`) carries its
+mode + suggestions atomically (so they never disagree); the LLM side (`flatMapLatest → stateIn`)
+runs **only on a boundary**, clears to empty while computing, and fills when inference returns —
+`combine`d into `SuggestionState(active, mode, dictionary, llmNextWord)`. So the slow LLM never
+blocks or desyncs the instant slots. Bound via Hilt qualifiers `@DictionarySuggestions`
+(`DictionarySuggestionSource`) and `@LlmSuggestions` (`LlmSuggestionSource`). The dictionary is
+offline, so the keyboard is useful **even with no LLM model present**.
+
+- **Dictionary engine** — `suggestion/dictionary/`: `DictionaryEngine` (`@Singleton`, implements the
+  `Dictionary` seam) lazily loads a bundled frequency word list (`app/src/main/assets/dictionary/
+  en_frequency.txt`, SymSpell MIT list, ~83k words; strip the leading BOM) into a pure `WordIndex`.
+  `WordIndex.complete(prefix)` returns frequency-ranked completions; `correct(word)` returns
+  edit-distance fixes (bounded Damerau-Levenshtein, same-first-letter candidates).
+- **`DictionarySuggestionSource`** — mid-word: completions (personal words first), and a
+  `correction`
+  **only when the prefix completes to nothing** (the typo signal), preferring a learned correction
+  from the DB over the dictionary guess. On a boundary: context next-word n-grams, backfilled with
+  the user's most-used words (`PersonalizationRepository.topWords` / `SuggestionDao.topWords`), then
+  the bundled dictionary's most common words (`WordIndex.topWords`) as a last resort.
+- **LLM source** — `LlmSuggestionSource` + `suggestion/llm/SuggestionPrompt.kt` (pure, no LiteRT
+  types): next-word only, **full-freedom** — `SuggestionPrompt.nextWord(text)` sends just the text
+  so far (no personalization hints) and asks for the single next word; `parse` is tolerant (bare
+  word / JSON array / loose list). The coordinator uses `words.firstOrNull()` for slot 3.
+- **UI** — `keyboard/suggestion/SuggestionBar.kt`: one **fixed 3-slot** row (Gboard-style, no
+  reflow). TYPING slots = `dictionary.words` (the `correction` slot is bold). NEXT_WORD slots =
+  `[db0, db1, llmNextWord]`, each empty one falling back to a muted, non-tappable debug placeholder
+  (`"TBD suggestion"` / `"TBD llm"`); the LLM slot uses the primary container, the rest the
+  secondary. The tools toolbar shows only when `!state.active`. Suggestions are **suggest-only** —
+  tapping replaces the in-progress word (`KeyboardMessage.CommitSuggestion`); committed text is
+  never
+  auto-rewritten. (The `"TBD …"` placeholders are debug aids; remove once behaviour is confirmed.)
+
+The n-gram DB's previously write-only `corrections` table is now read via
+`SuggestionDao.topReplacements` / `PersonalizationRepository.learnedCorrections` (the LLM no longer
+receives DB hints — it's full-freedom next-word).
 
 - **Learning (no per-key hooks):** `keyboard/observe/ObservationManager.kt` diffs successive
   "text before cursor" snapshots to detect finalized words → writes n-grams / corrections to Room

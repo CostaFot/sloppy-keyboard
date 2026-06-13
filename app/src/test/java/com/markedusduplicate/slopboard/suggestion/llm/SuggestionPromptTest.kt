@@ -8,47 +8,42 @@ import org.junit.Test
 class SuggestionPromptTest {
 
     @Test
-    fun `parses a clean json array`() {
-        assertEquals(
-            listOf("the", "quick", "brown"),
-            SuggestionPrompt.parse("""["the","quick","brown"]"""),
-        )
+    fun `next-word prompt asks for one word and includes the text, with no personalization`() {
+        val prompt = SuggestionPrompt.nextWord("how are ")
+        assertTrue(prompt.contains("next word"))
+        assertTrue(prompt.contains("single next word"))
+        assertTrue(prompt.contains("how are "))
+        assertFalse(prompt.contains("often follows"))
     }
 
     @Test
-    fun `extracts the array from surrounding prose`() {
-        assertEquals(
-            listOf("a", "b", "c"),
-            SuggestionPrompt.parse("""Sure! ["a", "b", "c"] hope that helps"""),
-        )
+    fun `parses a bare word reply`() {
+        assertEquals(listOf("morning"), SuggestionPrompt.parse("morning").words)
+    }
+
+    @Test
+    fun `parses a json array and keeps the leading word first`() {
+        assertEquals(listOf("you", "things"), SuggestionPrompt.parse("""["you", "things"]""").words)
     }
 
     @Test
     fun `falls back to a loose comma list`() {
-        assertEquals(listOf("cat", "dog", "bird"), SuggestionPrompt.parse("cat, dog, bird"))
+        assertEquals(listOf("cat", "dog", "bird"), SuggestionPrompt.parse("cat, dog, bird").words)
+    }
+
+    @Test
+    fun `keeps only the first word of a multi-word entry`() {
+        assertEquals(listOf("going", "want"), SuggestionPrompt.parse("""["going to", "want to"]""").words)
     }
 
     @Test
     fun `caps at three and dedupes case-insensitively`() {
-        assertEquals(listOf("Hi", "yo"), SuggestionPrompt.parse("""["Hi","hi","yo"]"""))
-        assertEquals(listOf("a", "b", "c"), SuggestionPrompt.parse("""["a","b","c","d"]"""))
+        assertEquals(listOf("Hi", "yo"), SuggestionPrompt.parse("""["Hi","hi","yo"]""").words)
+        assertEquals(listOf("a", "b", "c"), SuggestionPrompt.parse("""["a","b","c","d"]""").words)
     }
 
     @Test
     fun `returns nothing for empty input`() {
-        assertTrue(SuggestionPrompt.parse("").isEmpty())
-    }
-
-    @Test
-    fun `omits the personalization line when there are no hints`() {
-        val prompt = SuggestionPrompt.build("what the ", "what the", emptyList())
-        assertFalse(prompt.contains("often follows"))
-        assertTrue(prompt.contains("what the "))
-    }
-
-    @Test
-    fun `injects personalization hints when present`() {
-        val prompt = SuggestionPrompt.build("what the ", "what the", listOf("heck", "hell"))
-        assertTrue(prompt.contains("""often follows "what the" with: heck, hell"""))
+        assertTrue(SuggestionPrompt.parse("").words.isEmpty())
     }
 }

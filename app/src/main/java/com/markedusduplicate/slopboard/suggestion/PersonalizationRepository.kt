@@ -38,6 +38,19 @@ class PersonalizationRepository @Inject constructor(
             dao.recordAccepted(context, word)
         }
 
+    /** Replacements the user has previously made for [original], most frequent first. */
+    suspend fun learnedCorrections(original: String): List<String> =
+        withContext(dispatcherProvider.io) {
+            if (original.isBlank()) return@withContext emptyList()
+            dao.topReplacements(original, FETCH_LIMIT)
+        }
+
+    /** The user's most-used words across every context — a fallback when no context matches. */
+    suspend fun topWords(limit: Int): List<String> =
+        withContext(dispatcherProvider.io) {
+            dao.topWords(limit)
+        }
+
     /**
      * Up to [MAX_SUGGESTIONS] words for [context]: accepted chips first (a stronger signal than
      * passive typing), then frequent n-gram follow-ons. Deduped case-insensitively and, when the

@@ -124,7 +124,7 @@ private fun SetupScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        var text by remember { mutableStateOf("type here…") }
+        var text by remember { mutableStateOf("") }
         TextField(
             value = text,
             onValueChange = { text = it },
