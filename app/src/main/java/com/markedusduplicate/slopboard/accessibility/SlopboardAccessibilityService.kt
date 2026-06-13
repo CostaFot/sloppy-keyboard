@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.core.graphics.scale
 import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.common.di.ApplicationCoroutineScope
 import com.markedusduplicate.logging.logDebug
@@ -16,6 +17,7 @@ import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -116,36 +118,40 @@ class SlopboardAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** Capture the current display as a downscaled JPEG (null on failure). Suspends until the callback fires. */
-    private suspend fun captureScreenshot(): ByteArray? = suspendCancellableCoroutine { continuation ->
-        takeScreenshot(
-            Display.DEFAULT_DISPLAY,
-            Dispatchers.IO.asExecutor(),
-            object : TakeScreenshotCallback {
-                override fun onSuccess(result: ScreenshotResult) {
-                    val bytes = runCatching {
-                        val buffer = result.hardwareBuffer
-                        val bitmap = Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
-                        buffer.close()
-                        bitmap?.let { encodeJpeg(it) }
-                    }.getOrNull()
-                    if (continuation.isActive) continuation.resume(bytes)
-                }
-
-                override fun onFailure(errorCode: Int) {
-                    logDebug { "takeScreenshot failed: $errorCode" }
-                    if (continuation.isActive) continuation.resume(null)
-                }
-            },
-        )
+    /** Capture the current display as a downscaled JPEG (null on failure). */
+    private suspend fun captureScreenshot(): ByteArray? = withContext(Dispatchers.IO) {
+        val result = awaitScreenshot() ?: return@withContext null
+        return@withContext encodeJpeg(result)
     }
 
-    private fun encodeJpeg(hardwareBitmap: Bitmap): ByteArray {
-        val software = hardwareBitmap.copy(Bitmap.Config.ARGB_8888, false)
-        val scaled = downscale(software, MAX_SCREENSHOT_DIM)
-        return ByteArrayOutputStream().use { out ->
-            scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
-            out.toByteArray()
+    private suspend fun awaitScreenshot(): ScreenshotResult? =
+        suspendCancellableCoroutine { continuation ->
+            takeScreenshot(
+                Display.DEFAULT_DISPLAY,
+                Dispatchers.IO.asExecutor(),
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(result: ScreenshotResult) {
+                        if (continuation.isActive) continuation.resume(result)
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        logDebug { "takeScreenshot failed: $errorCode" }
+                        if (continuation.isActive) continuation.resume(null)
+                    }
+                },
+            )
+        }
+
+    private fun encodeJpeg(result: ScreenshotResult): ByteArray? {
+        val buffer = result.hardwareBuffer
+        return buffer.use { buffer ->
+            val hardware = Bitmap.wrapHardwareBuffer(buffer, result.colorSpace) ?: return null
+            val software = hardware.copy(Bitmap.Config.ARGB_8888, false)
+            val scaled = downscale(software, MAX_SCREENSHOT_DIM)
+            ByteArrayOutputStream().use { out ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                out.toByteArray()
+            }
         }
     }
 
@@ -153,12 +159,7 @@ class SlopboardAccessibilityService : AccessibilityService() {
         val largest = maxOf(bitmap.width, bitmap.height)
         if (largest <= maxDimension) return bitmap
         val scale = maxDimension.toFloat() / largest
-        return Bitmap.createScaledBitmap(
-            bitmap,
-            (bitmap.width * scale).toInt(),
-            (bitmap.height * scale).toInt(),
-            true,
-        )
+        return bitmap.scale((bitmap.width * scale).toInt(), (bitmap.height * scale).toInt())
     }
 
     private companion object {
