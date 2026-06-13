@@ -82,15 +82,22 @@ engine, so after pushing a new model `am force-stop` (or reinstall) to reload it
 
 ## Predictive suggestions (hybrid: instant dictionary + on-device LLM refine)
 
-Two suggestion sources behind a `SuggestionSource` seam (returns `Suggestions`), shown as **two
-independent rows** (not one strip — that jumped around) by `suggestion/SuggestionCoordinator.kt`.
-A single debounced input is `shareIn`'d; each row is its own `mapLatest` → `stateIn(EMPTY)`, then
-`combine`d into a `SuggestionState(active, dictionary, llm)`. Because each row is a `StateFlow`, the
-instant **dictionary** row refreshes on every keystroke while the slow **LLM** row holds its
-previous value until new inference completes — so the slow side never blanks or repaints the fast
-one. Bound via Hilt qualifiers `@DictionarySuggestions` (`DictionarySuggestionSource`) and
-`@LlmSuggestions` (`LlmSuggestionSource`). The dictionary row is offline, so the keyboard is useful
-**even with no LLM model present**.
+Two suggestion sources behind a `SuggestionSource` seam (returns `Suggestions`), shown in a **single
+mode-driven row** by `suggestion/SuggestionCoordinator.kt` — each engine drives the mode it's good
+at:
+
+- **`SuggestionMode.TYPING`** (mid-word): the dictionary's completions + spelling fix; the LLM is
+  **not** called mid-word.
+- **`SuggestionMode.NEXT_WORD`** (after a space): personal n-grams in the first slots, the LLM's
+  single next word in the last.
+
+A single debounced input is `shareIn`'d. The dictionary side (`mapLatest → stateIn`) carries its
+mode + suggestions atomically (so they never disagree); the LLM side (`flatMapLatest → stateIn`)
+runs **only on a boundary**, clears to empty while computing, and fills when inference returns —
+`combine`d into `SuggestionState(active, mode, dictionary, llmNextWord)`. So the slow LLM never
+blocks or desyncs the instant slots. Bound via Hilt qualifiers `@DictionarySuggestions`
+(`DictionarySuggestionSource`) and `@LlmSuggestions` (`LlmSuggestionSource`). The dictionary is
+offline, so the keyboard is useful **even with no LLM model present**.
 
 - **Dictionary engine** — `suggestion/dictionary/`: `DictionaryEngine` (`@Singleton`, implements the
   `Dictionary` seam) lazily loads a bundled frequency word list (`app/src/main/assets/dictionary/
@@ -104,13 +111,14 @@ one. Bound via Hilt qualifiers `@DictionarySuggestions` (`DictionarySuggestionSo
 - **LLM source** — `LlmSuggestionSource` + `suggestion/llm/SuggestionPrompt.kt` (pure, no LiteRT
   types): completion+`fix` prompt mid-word, next-word array on a boundary; tolerant parse, single
   word per chip, casing follows the typed prefix (shared `suggestion/Casing.kt`).
-- **UI** — `keyboard/suggestion/SuggestionBar.kt`: two **fixed 3-slot** rows (Gboard-style, so they
-  don't reflow) — dictionary on top (secondary container), the LLM row below (primary container)
-  shown only when it has results. Each row centres its best word (`correction` ?: first) and bolds
-  it; blank slots are empty spacers. The tools toolbar shows only when `!state.active` (empty
-  field).
-  Suggestions are **suggest-only** — tapping replaces the in-progress word
-  (`KeyboardMessage.CommitSuggestion`); committed text is never auto-rewritten.
+- **UI** — `keyboard/suggestion/SuggestionBar.kt`: one **fixed 3-slot** row (Gboard-style, no
+  reflow). TYPING slots = `dictionary.words` (the `correction` slot is bold). NEXT_WORD slots =
+  `[db0, db1, llmNextWord]`, each empty one falling back to a muted, non-tappable debug placeholder
+  (`"TBD suggestion"` / `"TBD llm"`); the LLM slot uses the primary container, the rest the
+  secondary. The tools toolbar shows only when `!state.active`. Suggestions are **suggest-only** —
+  tapping replaces the in-progress word (`KeyboardMessage.CommitSuggestion`); committed text is
+  never
+  auto-rewritten. (The `"TBD …"` placeholders are debug aids; remove once behaviour is confirmed.)
 
 The n-gram DB also feeds the LLM prompt as RAG hints, and its previously write-only `corrections`
 table is now read via `SuggestionDao.topReplacements` /

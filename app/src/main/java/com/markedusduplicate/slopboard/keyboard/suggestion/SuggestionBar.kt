@@ -3,7 +3,6 @@ package com.markedusduplicate.slopboard.keyboard.suggestion
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.markedusduplicate.design.theme.AppTheme
 import com.markedusduplicate.slopboard.retain.rememberRetainedViewModel
+import com.markedusduplicate.slopboard.suggestion.SuggestionMode
 import com.markedusduplicate.slopboard.suggestion.SuggestionState
 import com.markedusduplicate.slopboard.suggestion.Suggestions
 import com.markedusduplicate.slopboard.ui.activity.MainActivity
@@ -48,14 +49,15 @@ import dagger.hilt.android.EntryPointAccessors
 
 private val ROW_HEIGHT = 44.dp
 private const val SLOTS = 3
+private const val TBD_SUGGESTION = "TBD suggestion"
+private const val TBD_LLM = "TBD llm"
 
 /**
- * The area above the key grid. While typing it shows two stable, fixed-slot rows so nothing jumps:
- * the instant **dictionary** row (secondary container) on top, and — when it has results — the
- * **LLM** row (primary container) below. Each row is always [SLOTS] equal-width cells (blank cells
- * stay blank, so the layout never reflows); the row's best word sits in the centre, bold. When the
- * field is empty it shows a Gboard-style tools row (the settings cog opens the keyboard's setup
- * screen).
+ * The single suggestion row above the key grid. While typing a word it shows the dictionary's
+ * completions / spelling fix (the fix is bold); after a space it shows the user's next-word n-grams
+ * in the first two slots and the LLM's next word in the third — empty slots fall back to debug
+ * placeholders ("TBD suggestion" / "TBD llm"). It uses [SLOTS] fixed equal-width cells so nothing
+ * reflows. When the field is empty it shows a Gboard-style tools row (the cog opens setup).
  */
 @Composable
 fun SuggestionBar(modifier: Modifier = Modifier) {
@@ -74,116 +76,136 @@ private fun SuggestionStrip(
     onAccept: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scheme = MaterialTheme.colorScheme
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
+            .height(ROW_HEIGHT)
             .padding(horizontal = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        contentAlignment = Alignment.Center,
     ) {
         if (!state.active) {
-            IdleToolbar(Modifier
-                .fillMaxWidth()
-                .height(ROW_HEIGHT))
+            IdleToolbar(Modifier.fillMaxSize())
         } else {
-            SuggestionRow(
-                suggestions = state.dictionary,
-                color = scheme.secondaryContainer,
-                contentColor = scheme.onSecondaryContainer,
-                onAccept = onAccept,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(ROW_HEIGHT),
-            )
-            if (state.llm.words.isNotEmpty()) {
-                SuggestionRow(
-                    suggestions = state.llm,
-                    color = scheme.primaryContainer,
-                    contentColor = scheme.onPrimaryContainer,
-                    onAccept = onAccept,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(ROW_HEIGHT),
-                )
-            }
+            SuggestionRow(slots = slotsFor(state), onAccept = onAccept, modifier = Modifier.fillMaxSize())
         }
     }
 }
 
+/** What a single cell shows: a tappable word, a non-tappable debug placeholder, or nothing. */
+private sealed interface Slot {
+    data class Word(val text: String, val highlighted: Boolean, val fromLlm: Boolean) : Slot
+    data class Placeholder(val text: String) : Slot
+    data object Empty : Slot
+}
+
+private fun slotsFor(state: SuggestionState): List<Slot> = when (state.mode) {
+    SuggestionMode.TYPING -> (0 until SLOTS).map { i ->
+        val word = state.dictionary.words.getOrNull(i)
+        if (word == null) {
+            Slot.Empty
+        } else {
+            Slot.Word(word, highlighted = word == state.dictionary.correction, fromLlm = false)
+        }
+    }
+
+    SuggestionMode.NEXT_WORD -> listOf(
+        dbSlot(state.dictionary.words.getOrNull(0)),
+        dbSlot(state.dictionary.words.getOrNull(1)),
+        state.llmNextWord?.let { Slot.Word(it, highlighted = false, fromLlm = true) }
+            ?: Slot.Placeholder(TBD_LLM),
+    )
+}
+
+private fun dbSlot(word: String?): Slot =
+    word?.let { Slot.Word(it, highlighted = false, fromLlm = false) } ?: Slot.Placeholder(TBD_SUGGESTION)
+
 @Composable
 private fun SuggestionRow(
-    suggestions: Suggestions,
-    color: Color,
-    contentColor: Color,
+    slots: List<Slot>,
     onAccept: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val slots = arrangeSlots(suggestions)
-    val best = suggestions.correction ?: suggestions.words.firstOrNull()
-
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        slots.forEach { word ->
-            SuggestionSlot(
-                word = word,
-                highlighted = word != null && word == best,
-                color = color,
-                contentColor = contentColor,
-                onAccept = onAccept,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-            )
+        slots.forEach { slot ->
+            SuggestionSlot(slot = slot, onAccept = onAccept, modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight())
         }
     }
 }
 
-/** Up to three words laid out into fixed slots with the [Suggestions.correction]/best word centred. */
-private fun arrangeSlots(suggestions: Suggestions): List<String?> {
-    val best = suggestions.correction ?: suggestions.words.firstOrNull()
-    val others = suggestions.words.filter { it != best }
-    return listOf(others.getOrNull(0), best, others.getOrNull(1))
-}
-
 @Composable
 private fun SuggestionSlot(
-    word: String?,
-    highlighted: Boolean,
-    color: Color,
-    contentColor: Color,
+    slot: Slot,
     onAccept: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (word == null) {
-        Box(modifier) // blank cell keeps the row at three equal columns
-        return
+    val scheme = MaterialTheme.colorScheme
+    when (slot) {
+        is Slot.Empty -> Box(modifier)
+
+        is Slot.Placeholder -> ChipSurface(
+            modifier = modifier,
+            color = scheme.surfaceVariant,
+            contentColor = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+            onClick = null,
+        ) {
+            SlotText(slot.text, italic = true)
+        }
+
+        is Slot.Word -> ChipSurface(
+            modifier = modifier,
+            color = if (slot.fromLlm) scheme.primaryContainer else scheme.secondaryContainer,
+            contentColor = if (slot.fromLlm) scheme.onPrimaryContainer else scheme.onSecondaryContainer,
+            onClick = { onAccept(slot.text) },
+        ) {
+            SlotText(slot.text, bold = slot.highlighted)
+        }
     }
-    Surface(
-        onClick = { onAccept(word) },
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        color = color,
-        contentColor = contentColor,
-    ) {
+}
+
+@Composable
+private fun ChipSurface(
+    color: Color,
+    contentColor: Color,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val inner: @Composable () -> Unit = {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = word,
-                fontSize = 15.sp,
-                fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
+            content = { content() },
+        )
+    }
+    if (onClick == null) {
+        Surface(modifier = modifier, shape = shape, color = color, contentColor = contentColor) { inner() }
+    } else {
+        Surface(onClick = onClick, modifier = modifier, shape = shape, color = color, contentColor = contentColor) {
+            inner()
         }
     }
+}
+
+@Composable
+private fun SlotText(text: String, bold: Boolean = false, italic: Boolean = false) {
+    Text(
+        text = text,
+        fontSize = 15.sp,
+        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+        fontStyle = if (italic) FontStyle.Italic else FontStyle.Normal,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+    )
 }
 
 @Composable
@@ -232,14 +254,15 @@ private fun IdleToolbarPreview() {
 
 @Preview
 @Composable
-private fun DictionaryRowPreview() {
+private fun TypingRowPreview() {
     AppTheme {
         Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
             SuggestionStrip(
                 state = SuggestionState(
                     active = true,
-                    dictionary = Suggestions(listOf("Android", "androids", "andromeda")),
-                    llm = Suggestions.EMPTY,
+                    mode = SuggestionMode.TYPING,
+                    dictionary = Suggestions(listOf("the", "then", "they"), correction = "the"),
+                    llmNextWord = null,
                 ),
                 onAccept = {},
             )
@@ -249,14 +272,15 @@ private fun DictionaryRowPreview() {
 
 @Preview
 @Composable
-private fun TwoRowPreview() {
+private fun NextWordRowPreview() {
     AppTheme {
         Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
             SuggestionStrip(
                 state = SuggestionState(
                     active = true,
-                    dictionary = Suggestions(listOf("the", "then", "they"), correction = "the"),
-                    llm = Suggestions(listOf("there", "their", "they")),
+                    mode = SuggestionMode.NEXT_WORD,
+                    dictionary = Suggestions(listOf("morning")),
+                    llmNextWord = null,
                 ),
                 onAccept = {},
             )

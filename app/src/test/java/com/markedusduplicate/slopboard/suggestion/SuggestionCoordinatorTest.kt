@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -24,26 +25,6 @@ class SuggestionCoordinatorTest {
     private fun pastDebounce() = SuggestionCoordinator.DEBOUNCE_MS + 1
 
     @Test
-    fun `dictionary row is debounced and reflects the latest input`() = runTest {
-        val tracker = InputContextTracker()
-        val calls = mutableListOf<String>()
-        val dictionary = SuggestionSource { text -> calls.add(text); Suggestions(listOf("x")) }
-        val coordinator = SuggestionCoordinator(tracker, dictionary, noLlm, backgroundScope)
-
-        tracker.updateText("hello ")
-        advanceTimeBy(200)
-        runCurrent()
-        assertTrue("should not query before the debounce window elapses", calls.isEmpty())
-
-        advanceTimeBy(150)
-        runCurrent()
-
-        assertEquals(listOf("hello "), calls)
-        assertEquals(Suggestions(listOf("x")), coordinator.state.value.dictionary)
-        assertTrue(coordinator.state.value.active)
-    }
-
-    @Test
     fun `empty input is inactive`() = runTest {
         val tracker = InputContextTracker()
         val coordinator =
@@ -56,61 +37,59 @@ class SuggestionCoordinatorTest {
     }
 
     @Test
-    fun `mid-word query runs without waiting for a word boundary`() = runTest {
+    fun `mid-word shows the dictionary and never calls the llm`() = runTest {
         val tracker = InputContextTracker()
-        val calls = mutableListOf<String>()
-        val dictionary = SuggestionSource { text -> calls.add(text); Suggestions(listOf("Android")) }
-        val coordinator = SuggestionCoordinator(tracker, dictionary, noLlm, backgroundScope)
+        val llmCalls = mutableListOf<String>()
+        val dictionary = SuggestionSource { Suggestions(listOf("Android", "androids")) }
+        val llm = SuggestionSource { text -> llmCalls.add(text); Suggestions(listOf("x")) }
+        val coordinator = SuggestionCoordinator(tracker, dictionary, llm, backgroundScope)
 
         tracker.updateText("Andro")
         advanceTimeBy(pastDebounce())
         runCurrent()
 
-        assertEquals(listOf("Andro"), calls)
-        assertEquals(Suggestions(listOf("Android")), coordinator.state.value.dictionary)
+        val state = coordinator.state.value
+        assertEquals(SuggestionMode.TYPING, state.mode)
+        assertEquals(listOf("Android", "androids"), state.dictionary.words)
+        assertNull(state.llmNextWord)
+        assertTrue("the LLM must not run mid-word", llmCalls.isEmpty())
     }
 
     @Test
-    fun `dictionary row shows at once while the llm row arrives later`() = runTest {
+    fun `after a space the db fills the first slots and the llm the last`() = runTest {
         val tracker = InputContextTracker()
-        val dictionary = SuggestionSource { Suggestions(listOf("db")) }
-        val llm = SuggestionSource { delay(100); Suggestions(listOf("llm")) }
+        val llmCalls = mutableListOf<String>()
+        val dictionary = SuggestionSource { Suggestions(listOf("world", "there")) }
+        val llm = SuggestionSource { text -> llmCalls.add(text); Suggestions(listOf("planet")) }
         val coordinator = SuggestionCoordinator(tracker, dictionary, llm, backgroundScope)
 
-        tracker.updateText("hi ")
+        tracker.updateText("hello ")
         advanceTimeBy(pastDebounce())
         runCurrent()
-        assertEquals(Suggestions(listOf("db")), coordinator.state.value.dictionary)
-        assertEquals(Suggestions.EMPTY, coordinator.state.value.llm)
 
-        advanceTimeBy(101)
-        runCurrent()
-        assertEquals(Suggestions(listOf("db")), coordinator.state.value.dictionary)
-        assertEquals(Suggestions(listOf("llm")), coordinator.state.value.llm)
+        val state = coordinator.state.value
+        assertEquals(SuggestionMode.NEXT_WORD, state.mode)
+        assertEquals(listOf("world", "there"), state.dictionary.words)
+        assertEquals("planet", state.llmNextWord)
+        assertEquals(listOf("hello "), llmCalls)
     }
 
     @Test
-    fun `llm row keeps its previous value while the dictionary updates`() = runTest {
+    fun `db next-words resolve before the delayed llm word`() = runTest {
         val tracker = InputContextTracker()
-        val dictionary = SuggestionSource { text -> Suggestions(listOf(text.trim())) }
-        val llm = SuggestionSource { text -> delay(100); Suggestions(listOf("llm:${text.trim()}")) }
+        val dictionary = SuggestionSource { Suggestions(listOf("world", "there")) }
+        val llm = SuggestionSource { delay(100); Suggestions(listOf("planet")) }
         val coordinator = SuggestionCoordinator(tracker, dictionary, llm, backgroundScope)
 
-        tracker.updateText("a ")
+        tracker.updateText("hello ")
         advanceTimeBy(pastDebounce())
         runCurrent()
-        advanceTimeBy(101)
-        runCurrent()
-        assertEquals(Suggestions(listOf("llm:a")), coordinator.state.value.llm)
-
-        tracker.updateText("a b ")
-        advanceTimeBy(pastDebounce())
-        runCurrent()
-        assertEquals(Suggestions(listOf("a b")), coordinator.state.value.dictionary)
-        assertEquals(Suggestions(listOf("llm:a")), coordinator.state.value.llm)
+        assertEquals(listOf("world", "there"), coordinator.state.value.dictionary.words)
+        assertNull("llm slot shows the placeholder until inference returns", coordinator.state.value.llmNextWord)
 
         advanceTimeBy(101)
         runCurrent()
-        assertEquals(Suggestions(listOf("llm:a b")), coordinator.state.value.llm)
+        assertEquals("planet", coordinator.state.value.llmNextWord)
+        assertEquals(listOf("world", "there"), coordinator.state.value.dictionary.words)
     }
 }
