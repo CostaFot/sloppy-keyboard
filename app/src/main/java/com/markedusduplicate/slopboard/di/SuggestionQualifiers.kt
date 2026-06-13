@@ -2,12 +2,12 @@ package com.markedusduplicate.slopboard.di
 
 import javax.inject.Qualifier
 
-/** The instant, on-device n-gram suggestion source. */
+/** The instant, offline dictionary + personal-history suggestion source. */
 @Qualifier
 @Retention(AnnotationRetention.RUNTIME)
-annotation class DbSuggestions
+annotation class DictionarySuggestions
 
-/** The slower LiteRT-LM suggestion source that refines the n-gram suggestions. */
+/** The slower LiteRT-LM source that refines the instant suggestions with context. */
 @Qualifier
 @Retention(AnnotationRetention.RUNTIME)
 annotation class LlmSuggestions

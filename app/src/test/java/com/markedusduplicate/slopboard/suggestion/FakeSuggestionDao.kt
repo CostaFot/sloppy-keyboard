@@ -32,6 +32,9 @@ class FakeSuggestionDao : SuggestionDao {
         corrections[original to replacement] = corrections.getValue(original to replacement) + 1
     }
 
+    override suspend fun topReplacements(original: String, limit: Int): List<String> =
+        top(corrections, original, limit)
+
     override suspend fun insertAcceptedIgnore(entry: AcceptedSuggestion): Long =
         insertIgnore(accepted, entry.context to entry.acceptedWord)
 

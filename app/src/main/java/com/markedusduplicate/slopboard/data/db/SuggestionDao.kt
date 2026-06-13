@@ -49,6 +49,11 @@ interface SuggestionDao {
         }
     }
 
+    @Query(
+        "SELECT replacement FROM corrections WHERE original = :original ORDER BY count DESC, replacement ASC LIMIT :limit"
+    )
+    suspend fun topReplacements(original: String, limit: Int): List<String>
+
     // --- accepted suggestions ---
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

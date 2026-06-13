@@ -9,9 +9,10 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * Next-word suggestions from the local LiteRT-LM model, personalized by injecting the user's
- * n-gram hints into the prompt (RAG). Returns an empty list when no model is loaded or inference
- * fails, so the keyboard silently falls back to the n-gram source.
+ * The keyboard's only chip source: completions and spelling fixes for the word being typed, or
+ * next-word predictions on a boundary, from the local LiteRT-LM model. Personalized by injecting
+ * the user's n-gram hints into the prompt (RAG). Returns [Suggestions.EMPTY] when no model is
+ * loaded or inference fails, so the strip stays empty rather than showing stale chips.
  */
 class LlmSuggestionSource @Inject constructor(
     private val engine: LlmEngine,
@@ -19,21 +20,25 @@ class LlmSuggestionSource @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : SuggestionSource {
 
-    override suspend fun suggest(textBeforeCursor: String): List<String> =
+    override suspend fun suggest(textBeforeCursor: String): Suggestions =
         withContext(dispatcherProvider.io) {
             val context = TextContext.predictionContext(textBeforeCursor)
-            if (context.isBlank()) return@withContext emptyList()
-            val activeEngine = engine.engineOrNull() ?: return@withContext emptyList()
+            val prefix = TextContext.currentPrefix(textBeforeCursor)
+            if (context.isBlank() && prefix.isBlank()) return@withContext Suggestions.EMPTY
+            val activeEngine = engine.engineOrNull() ?: return@withContext Suggestions.EMPTY
 
-            val hints = personalization.suggest(context, TextContext.currentPrefix(textBeforeCursor))
-            val prompt = SuggestionPrompt.build(textBeforeCursor, context, hints)
+            val hints = personalization.suggest(context, prefix)
+            val prompt = SuggestionPrompt.build(textBeforeCursor, context, prefix, hints)
+            logDebug { "LLM prompt:\n$prompt" }
             try {
                 activeEngine.createConversation().use { conversation ->
-                    SuggestionPrompt.parse(conversation.sendMessage(prompt).toString())
+                    val reply = conversation.sendMessage(prompt).toString()
+                    logDebug { "LLM reply: $reply" }
+                    SuggestionPrompt.parse(reply, prefix)
                 }
             } catch (t: Throwable) {
                 logDebug { "LLM inference failed: ${t.message}" }
-                emptyList()
+                Suggestions.EMPTY
             }
         }
 }

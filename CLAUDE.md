@@ -80,13 +80,41 @@ engine, so after pushing a new model `am force-stop` (or reinstall) to reload it
   into one component and can't implement the same generic interface twice. Use a plain
   interface with its own method per VM.
 
-## Predictive suggestions (DB + on-device LLM)
+## Predictive suggestions (hybrid: instant dictionary + on-device LLM refine)
 
-Two suggestion sources behind a `SuggestionSource` seam, blended in
-`suggestion/SuggestionCoordinator.kt`:
-the DB source shows instantly on each keystroke; the LLM source replaces it when inference returns
-(`flatMapLatest`, so typing cancels stale inference). Bound via Hilt qualifiers `@DbSuggestions`
-(`NgramSuggestionSource`) and `@LlmSuggestions` (`LlmSuggestionSource`).
+Two suggestion sources behind a `SuggestionSource` seam (returns `Suggestions`), shown as **two
+independent rows** (not one strip — that jumped around) by `suggestion/SuggestionCoordinator.kt`.
+A single debounced input is `shareIn`'d; each row is its own `mapLatest` → `stateIn(EMPTY)`, then
+`combine`d into a `SuggestionState(active, dictionary, llm)`. Because each row is a `StateFlow`, the
+instant **dictionary** row refreshes on every keystroke while the slow **LLM** row holds its
+previous value until new inference completes — so the slow side never blanks or repaints the fast
+one. Bound via Hilt qualifiers `@DictionarySuggestions` (`DictionarySuggestionSource`) and
+`@LlmSuggestions` (`LlmSuggestionSource`). The dictionary row is offline, so the keyboard is useful
+**even with no LLM model present**.
+
+- **Dictionary engine** — `suggestion/dictionary/`: `DictionaryEngine` (`@Singleton`, implements the
+  `Dictionary` seam) lazily loads a bundled frequency word list (`app/src/main/assets/dictionary/
+  en_frequency.txt`, SymSpell MIT list, ~83k words; strip the leading BOM) into a pure `WordIndex`.
+  `WordIndex.complete(prefix)` returns frequency-ranked completions; `correct(word)` returns
+  edit-distance fixes (bounded Damerau-Levenshtein, same-first-letter candidates).
+- **`DictionarySuggestionSource`** — mid-word: completions (personal words first), and a
+  `correction`
+  **only when the prefix completes to nothing** (the typo signal), preferring a learned correction
+  from the DB over the dictionary guess. On a boundary: personal next-word n-grams.
+- **LLM source** — `LlmSuggestionSource` + `suggestion/llm/SuggestionPrompt.kt` (pure, no LiteRT
+  types): completion+`fix` prompt mid-word, next-word array on a boundary; tolerant parse, single
+  word per chip, casing follows the typed prefix (shared `suggestion/Casing.kt`).
+- **UI** — `keyboard/suggestion/SuggestionBar.kt`: two **fixed 3-slot** rows (Gboard-style, so they
+  don't reflow) — dictionary on top (secondary container), the LLM row below (primary container)
+  shown only when it has results. Each row centres its best word (`correction` ?: first) and bolds
+  it; blank slots are empty spacers. The tools toolbar shows only when `!state.active` (empty
+  field).
+  Suggestions are **suggest-only** — tapping replaces the in-progress word
+  (`KeyboardMessage.CommitSuggestion`); committed text is never auto-rewritten.
+
+The n-gram DB also feeds the LLM prompt as RAG hints, and its previously write-only `corrections`
+table is now read via `SuggestionDao.topReplacements` /
+`PersonalizationRepository.learnedCorrections`.
 
 - **Learning (no per-key hooks):** `keyboard/observe/ObservationManager.kt` diffs successive
   "text before cursor" snapshots to detect finalized words → writes n-grams / corrections to Room
