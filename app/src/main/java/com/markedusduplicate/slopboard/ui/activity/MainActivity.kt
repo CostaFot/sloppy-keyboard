@@ -3,6 +3,7 @@ package com.markedusduplicate.slopboard.ui.activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
@@ -38,6 +39,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.markedusduplicate.design.theme.AppTheme
 import com.markedusduplicate.logging.logDebug
 import com.markedusduplicate.slopboard.accessibility.SlopboardAccessibilityService
+import com.markedusduplicate.slopboard.clippy.ClippyOverlayService
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -72,6 +74,8 @@ private fun SetupScreen() {
     var isEnabled by remember { mutableStateOf(false) }
     var isSelected by remember { mutableStateOf(false) }
     var isAccessibilityEnabled by remember { mutableStateOf(false) }
+    var canDrawOverlays by remember { mutableStateOf(false) }
+    var isClippyRunning by remember { mutableStateOf(false) }
 
     // Re-read status every time the Activity resumes, so returning from system
     // settings / the IME picker refreshes the indicators.
@@ -83,6 +87,8 @@ private fun SetupScreen() {
             Settings.Secure.DEFAULT_INPUT_METHOD,
         )?.startsWith(context.packageName) == true
         isAccessibilityEnabled = isAccessibilityServiceEnabled(context)
+        canDrawOverlays = Settings.canDrawOverlays(context)
+        isClippyRunning = ClippyOverlayService.isRunning
         onPauseOrDispose {}
     }
 
@@ -105,6 +111,8 @@ private fun SetupScreen() {
         StatusRow(label = "Enabled", ok = isEnabled)
         StatusRow(label = "Selected as default", ok = isSelected)
         StatusRow(label = "Screen context (accessibility)", ok = isAccessibilityEnabled)
+        StatusRow(label = "Draw over apps (Clippy)", ok = canDrawOverlays)
+        StatusRow(label = "Clippy running", ok = isClippyRunning)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -137,6 +145,40 @@ private fun SetupScreen() {
             },
         ) {
             Text(text = "3. Enable screen context")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.fromParts("package", context.packageName, null),
+                    ),
+                )
+            },
+        ) {
+            Text(text = "4. Allow Clippy to draw over apps")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = canDrawOverlays && isAccessibilityEnabled,
+            onClick = {
+                if (isClippyRunning) {
+                    ClippyOverlayService.stop(context)
+                    isClippyRunning = false
+                } else {
+                    ClippyOverlayService.start(context)
+                    isClippyRunning = true
+                }
+            },
+        ) {
+            Text(text = if (isClippyRunning) "5. Stop Clippy" else "5. Start Clippy")
         }
 
         Spacer(modifier = Modifier.height(24.dp))
