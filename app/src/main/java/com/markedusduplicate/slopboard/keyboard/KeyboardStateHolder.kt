@@ -15,11 +15,19 @@ class KeyboardStateHolder @Inject constructor() {
         logDebug { "Init KeyboardStateHolder, id: ${hashCode()}" }
     }
 
-    /** Show [route] over a deterministic stack: Main at the root, [route] on top (if not it). */
+    /**
+     * Navigate to [route], single-top: if it's already in the back stack, pop everything above it
+     * to bring it forward; otherwise push it. Never duplicates an entry or clears the stack.
+     */
     fun navigateTo(route: KeyboardRoute) {
-        backStack.clear()
-        backStack.add(KeyboardRoute.Main)
-        if (route != KeyboardRoute.Main) backStack.add(route)
+        val index = backStack.indexOf(route)
+        if (index == -1) {
+            backStack.add(route)
+        } else {
+            while (backStack.lastIndex > index) {
+                backStack.removeAt(backStack.lastIndex)
+            }
+        }
     }
 
     fun back() {

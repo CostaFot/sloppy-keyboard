@@ -12,10 +12,13 @@ import kotlinx.serialization.Serializable
 sealed interface KeyboardRoute : NavKey {
 
     /** Chip label for the debug nav bar, derived from the type name (override for a nicer name). */
-    val label: String get() = this::class.simpleName.orEmpty()
+    val label: String
 
     @Serializable
-    data object Main : KeyboardRoute
+    data object Main : KeyboardRoute {
+        override val label: String
+            get() = "Main"
+    }
 
     @Serializable
     data object SmartReply : KeyboardRoute {
