@@ -111,8 +111,9 @@ offline, so the keyboard is useful **even with no LLM model present**.
   the user's most-used words (`PersonalizationRepository.topWords` / `SuggestionDao.topWords`), then
   the bundled dictionary's most common words (`WordIndex.topWords`) as a last resort.
 - **LLM source** — `LlmSuggestionSource` + `suggestion/llm/SuggestionPrompt.kt` (pure, no LiteRT
-  types): completion+`fix` prompt mid-word, next-word array on a boundary; tolerant parse, single
-  word per chip, casing follows the typed prefix (shared `suggestion/Casing.kt`).
+  types): next-word only, **full-freedom** — `SuggestionPrompt.nextWord(text)` sends just the text
+  so far (no personalization hints) and asks for the single next word; `parse` is tolerant (bare
+  word / JSON array / loose list). The coordinator uses `words.firstOrNull()` for slot 3.
 - **UI** — `keyboard/suggestion/SuggestionBar.kt`: one **fixed 3-slot** row (Gboard-style, no
   reflow). TYPING slots = `dictionary.words` (the `correction` slot is bold). NEXT_WORD slots =
   `[db0, db1, llmNextWord]`, each empty one falling back to a muted, non-tappable debug placeholder
@@ -122,9 +123,9 @@ offline, so the keyboard is useful **even with no LLM model present**.
   never
   auto-rewritten. (The `"TBD …"` placeholders are debug aids; remove once behaviour is confirmed.)
 
-The n-gram DB also feeds the LLM prompt as RAG hints, and its previously write-only `corrections`
-table is now read via `SuggestionDao.topReplacements` /
-`PersonalizationRepository.learnedCorrections`.
+The n-gram DB's previously write-only `corrections` table is now read via
+`SuggestionDao.topReplacements` / `PersonalizationRepository.learnedCorrections` (the LLM no longer
+receives DB hints — it's full-freedom next-word).
 
 - **Learning (no per-key hooks):** `keyboard/observe/ObservationManager.kt` diffs successive
   "text before cursor" snapshots to detect finalized words → writes n-grams / corrections to Room
