@@ -47,8 +47,9 @@ class ClippyComposeView(
 
     @Composable
     override fun Content() {
-        val current by state.collectAsStateWithLifecycle()
+        val s by state.collectAsStateWithLifecycle()
         AppTheme {
+            if (s == ClippyState.Hidden) return@AppTheme
             Column(
                 modifier = Modifier.wrapContentSize(),
                 horizontalAlignment = Alignment.Start,
@@ -67,12 +68,13 @@ class ClippyComposeView(
                         },
                 )
 
-                when (val s = current) {
-                    ClippyState.Idle -> Unit
-                    ClippyState.Thinking -> Bubble(text = "🤔 …", onClick = onDismiss)
-                    is ClippyState.Speaking -> Bubble(text = s.remark, onClick = onDismiss)
-                    is ClippyState.Unavailable -> Bubble(text = s.reason, onClick = onDismiss)
+                val bubble = when (val current = s) {
+                    ClippyState.Hidden -> null
+                    ClippyState.Thinking -> "🤔 …"
+                    is ClippyState.Speaking -> current.remark
+                    is ClippyState.Unavailable -> current.reason
                 }
+                if (bubble != null) Bubble(text = bubble, onClick = onDismiss)
             }
         }
     }
