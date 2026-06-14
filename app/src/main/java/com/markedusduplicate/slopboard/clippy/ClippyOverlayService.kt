@@ -23,6 +23,7 @@ import com.markedusduplicate.logging.logDebug
 import com.markedusduplicate.slopboard.agent.AgentEngine
 import com.markedusduplicate.slopboard.agent.AgentOverlayView
 import com.markedusduplicate.slopboard.agent.AgentState
+import com.markedusduplicate.slopboard.di.OcrScreenText
 import com.markedusduplicate.slopboard.slop.ScreenReadResult
 import com.markedusduplicate.slopboard.slop.ScreenTextReader
 import dagger.hilt.android.AndroidEntryPoint
@@ -62,6 +63,7 @@ class ClippyOverlayService :
     SavedStateRegistryOwner {
 
     @Inject
+    @OcrScreenText
     lateinit var screenTextReader: ScreenTextReader
 
     @Inject
