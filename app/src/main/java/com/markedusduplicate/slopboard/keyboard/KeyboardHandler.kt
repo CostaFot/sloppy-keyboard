@@ -1,5 +1,6 @@
 package com.markedusduplicate.slopboard.keyboard
 
+import android.net.Uri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,4 +20,7 @@ sealed interface KeyboardMessage {
      * commit [word] followed by a space.
      */
     data class CommitSuggestion(val word: String, val replacePrefixLength: Int) : KeyboardMessage
+
+    /** Insert a gif via the rich-content API ([uri] is a FileProvider `content://`), clipboard fallback. */
+    data class CommitGif(val uri: Uri, val mimeType: String, val description: String) : KeyboardMessage
 }

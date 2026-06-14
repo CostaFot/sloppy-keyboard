@@ -1,7 +1,14 @@
 package com.markedusduplicate.slopboard.keyboard
 
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.widget.Toast
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.inputmethod.InputContentInfoCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -84,6 +91,8 @@ class SlopboardKeyboardService :
                         }
                         currentInputConnection.commitText("${it.word} ", 1)
                     }
+
+                    is KeyboardMessage.CommitGif -> commitGif(it)
                 }
                 refreshInputContext()
             }
@@ -143,6 +152,43 @@ class SlopboardKeyboardService :
     override fun onDestroy() {
         logDebug { "keyboard onDestroy" }
         super.onDestroy()
+    }
+
+    /** Insert a gif via the rich-content API when the field accepts it, else copy to the clipboard. */
+    private fun commitGif(message: KeyboardMessage.CommitGif) {
+        val connection = currentInputConnection
+        val editorInfo = currentInputEditorInfo
+        val supportedMimeTypes =
+            editorInfo?.let { EditorInfoCompat.getContentMimeTypes(it) } ?: emptyArray()
+        // compareMimeTypes(concrete, desired): OUR concrete "image/gif" must be first, since the
+        // field usually advertises the wildcard "image/*" (only the 2nd arg may be a pattern).
+        val accepted = connection != null && editorInfo != null &&
+                supportedMimeTypes.any { ClipDescription.compareMimeTypes(message.mimeType, it) }
+        logDebug { "gif accepted=$accepted supported=${supportedMimeTypes.joinToString()}" }
+        if (accepted) {
+            val content = InputContentInfoCompat(
+                message.uri,
+                ClipDescription(message.description, arrayOf(message.mimeType)),
+                null,
+            )
+            val committed = InputConnectionCompat.commitContent(
+                connection!!,
+                editorInfo!!,
+                content,
+                InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION,
+                null,
+            )
+            logDebug { "gif commitContent committed=$committed" }
+            if (!committed) copyGifToClipboard(message)
+        } else {
+            copyGifToClipboard(message)
+        }
+    }
+
+    private fun copyGifToClipboard(message: KeyboardMessage.CommitGif) {
+        getSystemService(ClipboardManager::class.java)
+            ?.setPrimaryClip(ClipData.newUri(contentResolver, message.description, message.uri))
+        Toast.makeText(this, "Gif copied — paste it", Toast.LENGTH_SHORT).show()
     }
 
     private companion object {

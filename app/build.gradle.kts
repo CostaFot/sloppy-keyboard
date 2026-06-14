@@ -1,9 +1,19 @@
+import java.util.Properties
+
 plugins {
     id("application.common")
     id("application.compose.common")
     id("hilt.common")
     id("kotlinx-serialization")
 }
+
+// Resolve the Giphy API key from the environment first (CI / GitHub Actions secret), then fall back
+// to local.properties (gitignored) for local builds.
+val giphyApiKey: String = System.getenv("GIPHY_API_KEY")?.takeIf { it.isNotBlank() }
+    ?: Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }.getProperty("GIPHY_API_KEY", "")
 
 android {
     defaultConfig {
@@ -20,6 +30,8 @@ android {
         androidResources {
             localeFilters += setOf("en", "en-rAU", "it")
         }
+
+        buildConfigField("String", "GIPHY_API_KEY", "\"$giphyApiKey\"")
     }
 
     buildFeatures {

@@ -3,6 +3,7 @@ package com.markedusduplicate.slopboard.di
 import android.content.Context
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.markedusduplicate.common.FlagProvider
+import com.markedusduplicate.slopboard.net.GiphyService
 import com.markedusduplicate.slopboard.net.JsonPlaceHolderService
 import dagger.Module
 import dagger.Provides
@@ -78,4 +79,16 @@ object NetworkModule {
     fun providesJsonPlaceHolderService(
         retrofit: Retrofit
     ): JsonPlaceHolderService = retrofit.create(JsonPlaceHolderService::class.java)
+
+    @Provides
+    @Singleton
+    fun providesGiphyService(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): GiphyService = Retrofit.Builder()
+        .baseUrl("https://api.giphy.com/")
+        .client(okHttpClient)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(GiphyService::class.java)
 }

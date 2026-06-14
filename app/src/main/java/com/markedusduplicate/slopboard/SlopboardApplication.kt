@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.gif.AnimatedImageDecoder
 import coil3.request.crossfade
 import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.logging.logDebug
@@ -36,6 +37,7 @@ class SlopboardApplication : Application(), Configuration.Provider, SingletonIma
 
     override fun newImageLoader(context: Context): ImageLoader {
         return ImageLoader.Builder(context)
+            .components { add(AnimatedImageDecoder.Factory()) }
             .crossfade(true)
             .build()
     }
