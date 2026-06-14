@@ -15,9 +15,9 @@ import javax.inject.Singleton
  * The first planned backend is Pangram: a Retrofit service provided in
  * [com.markedusduplicate.slopboard.di.NetworkModule], authenticated with
  * `BuildConfig.AI_DETECTOR_API_KEY`, called inside `withContext(dispatcherProvider.io)` and wrapped
- * with `attempt {}` — mirroring [com.markedusduplicate.slopboard.domain.GifRepository]. Until those
- * API details land, [detect] is a placeholder that reports it isn't wired yet, and is not on the live
- * overlay path.
+ * with `attempt {}` — mirroring [com.markedusduplicate.slopboard.domain.JsonPlaceHolderRepository].
+ * Until those API details land, [detect] is a placeholder that reports it isn't wired yet, and is not
+ * on the live overlay path.
  */
 @Singleton
 class AiDetectorRepository @Inject constructor(

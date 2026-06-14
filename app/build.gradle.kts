@@ -7,14 +7,8 @@ plugins {
     id("kotlinx-serialization")
 }
 
-// Resolve the Giphy API key from the environment first (CI / GitHub Actions secret), then fall back
-// to local.properties (gitignored) for local builds.
-val giphyApiKey: String = System.getenv("GIPHY_API_KEY")?.takeIf { it.isNotBlank() }
-    ?: Properties().apply {
-        val file = rootProject.file("local.properties")
-        if (file.exists()) file.inputStream().use { load(it) }
-    }.getProperty("GIPHY_API_KEY", "")
-
+// Resolve the AI-detector API key from the environment first (CI / GitHub Actions secret), then fall
+// back to local.properties (gitignored) for local builds.
 val aiDetectorApiKey: String = System.getenv("AI_DETECTOR_API_KEY")?.takeIf { it.isNotBlank() }
     ?: Properties().apply {
         val file = rootProject.file("local.properties")
@@ -37,7 +31,6 @@ android {
             localeFilters += setOf("en", "en-rAU", "it")
         }
 
-        buildConfigField("String", "GIPHY_API_KEY", "\"$giphyApiKey\"")
         buildConfigField("String", "AI_DETECTOR_API_KEY", "\"$aiDetectorApiKey\"")
     }
 
@@ -110,11 +103,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     implementation(libs.androidx.startup)
-
-    // local persistence (suggestion learning DB)
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
 
     // on-device LLM inference
     implementation(libs.litertlm.android)

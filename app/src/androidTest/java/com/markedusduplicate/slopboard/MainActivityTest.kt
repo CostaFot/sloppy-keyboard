@@ -35,9 +35,9 @@ class MainActivityTest {
     }
 
     @Test
-    fun firstScreen_isForYou() {
+    fun setupScreen_isShown() {
         composeTestRule.apply {
-            onNodeWithText("Hello").assertIsDisplayed()
+            onNodeWithText("slop detector setup").assertIsDisplayed()
         }
     }
 }

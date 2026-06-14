@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -24,7 +23,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,25 +65,14 @@ class MainActivity : AppCompatActivity() {
 @Composable
 private fun SetupScreen() {
     val context = LocalContext.current
-    val inputMethodManager = remember(context) {
-        context.getSystemService(InputMethodManager::class.java)
-    }
 
-    var isEnabled by remember { mutableStateOf(false) }
-    var isSelected by remember { mutableStateOf(false) }
     var isAccessibilityEnabled by remember { mutableStateOf(false) }
     var canDrawOverlays by remember { mutableStateOf(false) }
     var isClippyRunning by remember { mutableStateOf(false) }
 
     // Re-read status every time the Activity resumes, so returning from system
-    // settings / the IME picker refreshes the indicators.
+    // settings refreshes the indicators.
     LifecycleResumeEffect(Unit) {
-        isEnabled = inputMethodManager.enabledInputMethodList
-            .any { it.packageName == context.packageName }
-        isSelected = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.DEFAULT_INPUT_METHOD,
-        )?.startsWith(context.packageName) == true
         isAccessibilityEnabled = isAccessibilityServiceEnabled(context)
         canDrawOverlays = Settings.canDrawOverlays(context)
         isClippyRunning = ClippyOverlayService.isRunning
@@ -102,15 +89,13 @@ private fun SetupScreen() {
         verticalArrangement = Arrangement.Top,
     ) {
         Text(
-            text = "slopboard setup",
+            text = "slop detector setup",
             style = MaterialTheme.typography.headlineSmall,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        StatusRow(label = "Enabled", ok = isEnabled)
-        StatusRow(label = "Selected as default", ok = isSelected)
-        StatusRow(label = "Screen context (accessibility)", ok = isAccessibilityEnabled)
+        StatusRow(label = "Screen reading (accessibility)", ok = isAccessibilityEnabled)
         StatusRow(label = "Draw over apps (Clippy)", ok = canDrawOverlays)
         StatusRow(label = "Clippy running", ok = isClippyRunning)
 
@@ -119,32 +104,10 @@ private fun SetupScreen() {
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-                context.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
-            },
-        ) {
-            Text(text = "1. Enable slopboard")
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                inputMethodManager.showInputMethodPicker()
-            },
-        ) {
-            Text(text = "2. Select slopboard")
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             },
         ) {
-            Text(text = "3. Enable screen context")
+            Text(text = "1. Enable screen reading")
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -160,7 +123,7 @@ private fun SetupScreen() {
                 )
             },
         ) {
-            Text(text = "4. Allow Clippy to draw over apps")
+            Text(text = "2. Allow Clippy to draw over apps")
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -178,18 +141,8 @@ private fun SetupScreen() {
                 }
             },
         ) {
-            Text(text = if (isClippyRunning) "5. Stop Clippy" else "5. Start Clippy")
+            Text(text = if (isClippyRunning) "3. Stop Clippy" else "3. Start Clippy")
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        var text by remember { mutableStateOf("") }
-        TextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text("Test the keyboard") },
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 

@@ -34,17 +34,19 @@ import javax.inject.Inject
 import kotlin.coroutines.resume
 
 /**
- * Reads the text visible on the current screen and publishes it to [ScreenContextHolder].
+ * The app's eyes and hands on the screen. It does three things, all of which only an
+ * `AccessibilityService` can do, so it registers itself with the singletons the rest of the app
+ * drives it through:
  *
- * Capture is gated on the user actually editing a text field (the only time the keyboard needs
- * screen context) and filtered to cut chrome: only visible nodes, only their `text` (icon buttons
- * expose their label as `contentDescription`, which is almost all noise), de-duplicated, and with
- * the focused field itself skipped (the IME already has that text). Bursts of
- * `TYPE_WINDOW_CONTENT_CHANGED` are debounced so a settling screen is captured once.
+ * 1. **Screenshots** for OCR — registers [ScreenshotCapturer]'s handler (the in-use screen reader,
+ *    [com.markedusduplicate.slopboard.slop.OcrScreenTextReader], asks for a JPEG of the display).
+ * 2. **Agent actions** — registers a [ScreenAgentHandler] on [ScreenController]: snapshots the
+ *    foreground app's actionable elements and taps/types/scrolls on the agent's behalf.
+ * 3. **Window text** — publishes the visible on-screen text to [ScreenContextHolder]. Text capture
+ *    is filtered to cut chrome (only visible nodes, only their `text`, de-duplicated) and bursts of
+ *    `TYPE_WINDOW_CONTENT_CHANGED` are debounced so a settling screen is captured once.
  *
- * Capture-only for now — the suggestion pipeline is untouched; a later step will read
- * [ScreenContextHolder] to give the on-device LLM screen context. The user must enable this service
- * under Settings → Accessibility; capture stays on-device.
+ * The user must enable this service under Settings → Accessibility; everything stays on-device.
  */
 @AndroidEntryPoint
 class SlopboardAccessibilityService : AccessibilityService() {

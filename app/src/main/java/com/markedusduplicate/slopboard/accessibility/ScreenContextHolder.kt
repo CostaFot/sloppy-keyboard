@@ -8,10 +8,8 @@ import javax.inject.Singleton
 
 /**
  * Holds the most recent on-screen text captured by [SlopboardAccessibilityService]. App-singleton
- * so it bridges the accessibility service (which produces it) and the suggestion layer (which will
- * later read it to enrich the LLM prompt). Mirrors the role of
- * [com.markedusduplicate.slopboard.keyboard.observe.InputContextTracker] for the screen, not the
- * cursor.
+ * so it bridges the accessibility service (which produces it) and the slop-detection layer (which
+ * reads it to decide what to check).
  */
 @Singleton
 class ScreenContextHolder @Inject constructor() {

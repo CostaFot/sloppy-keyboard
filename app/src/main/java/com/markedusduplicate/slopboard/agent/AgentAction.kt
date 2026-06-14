@@ -10,8 +10,7 @@ enum class ScrollDirection { UP, DOWN }
 /**
  * The single next step the agent model chose, parsed from its JSON reply. Tap/Type reference a node
  * by its snapshot [index] (see [ActionableNode]); the rest are global. Pure + tolerant of the usual
- * model sloppiness (code fences, prose around the JSON) so it's unit-testable — mirrors the parsing
- * style of [com.markedusduplicate.slopboard.suggestion.llm.SuggestionPrompt].
+ * model sloppiness (code fences, prose around the JSON) so it's unit-testable.
  */
 sealed interface AgentAction {
     data class Tap(val index: Int) : AgentAction

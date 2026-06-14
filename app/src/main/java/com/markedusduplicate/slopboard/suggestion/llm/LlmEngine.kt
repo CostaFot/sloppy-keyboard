@@ -20,10 +20,10 @@ import javax.inject.Singleton
  * Owns the LiteRT-LM [Engine] for the app session: resolves the model file and initialises the
  * engine once (trying NPU → GPU → CPU), keeping it alive.
  *
- * Warm-up runs on the application scope, not the per-keystroke suggestion flow, so it can't be
- * cancelled and restarted by typing. [engineOrNull] is non-blocking: it returns `null` while the
- * model is still loading (or if no model is present / every backend fails), and the keyboard falls
- * back to its on-device n-gram suggestions until the engine comes online.
+ * Warm-up runs on the application scope so it can't be cancelled and restarted by callers.
+ * [engineOrNull] is non-blocking: it returns `null` while the model is still loading (or if no model
+ * is present / every backend fails), so callers (OCR screen reading, the agent) degrade gracefully
+ * until the engine comes online.
  *
  * The model is loaded from the first `.litertlm` file in the app's external `models/` directory
  * (push one with `adb push … /Android/data/<pkg>/files/models/`).

@@ -38,19 +38,17 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Hosts the floating Clippy mascot in a system overlay window so it lives over every app, not just
- * the keyboard. Clippy is hidden until summoned by a left→right swipe on the [ClippyEdgeHandleView]
- * tab pinned to the left edge; summoning reads the text on the current screen (via [ScreenTextReader]
- * — accessibility text, with screenshot OCR as a fallback) and shows it in a speech bubble, then
- * auto-hides. Tapping the mascot re-runs the check; tapping the bubble dismisses it. The captured
- * text is destined for an AI-detection backend
+ * Hosts the floating Clippy mascot in a system overlay window so it lives over every app. Clippy is
+ * hidden until summoned by a left→right swipe on the [ClippyEdgeHandleView] tab pinned to the left
+ * edge; summoning reads the text on the current screen (via the `@OcrScreenText` [ScreenTextReader]
+ * — screenshot OCR) and shows it in a speech bubble, then auto-hides. Tapping the mascot re-runs the
+ * check; tapping the bubble dismisses it. The captured text is destined for an AI-detection backend
  * ([com.markedusduplicate.slopboard.slop.AiDetectorRepository]) to judge whether it's AI-generated
  * "slop" — see the TODO in [detectSlop].
  *
- * Unlike [com.markedusduplicate.slopboard.keyboard.SlopboardKeyboardService] (whose lifecycle is
- * driven by IME bind callbacks), an overlay service has no such callbacks and no decor view, so it
- * drives its own [LifecycleRegistry] to RESUMED and sets the view-tree owners directly on the
- * overlay view — both required for Compose to compose and recompose.
+ * An overlay service has no bind callbacks and no decor view, so it drives its own
+ * [LifecycleRegistry] to RESUMED and sets the view-tree owners directly on the overlay view — both
+ * required for Compose to compose and recompose.
  *
  * Requires the draw-over-apps permission (checked here) and the accessibility service enabled (for
  * reading the screen). Started/stopped from the setup screen; runs as a plain started service for now.

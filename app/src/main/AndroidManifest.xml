@@ -63,20 +63,8 @@
             <meta-data
                 android:name="autoStoreLocales"
                 android:value="true" />
-        </service> <!-- custom keyboard impl -->
-        <service
-            android:name=".keyboard.SlopboardKeyboardService"
-            android:exported="true"
-            android:permission="android.permission.BIND_INPUT_METHOD">
-            <intent-filter>
-                <action android:name="android.view.InputMethod" />
-            </intent-filter>
-
-            <meta-data
-                android:name="android.view.im"
-                android:resource="@xml/method" />
         </service>
-        <!-- reads on-screen text to give suggestions more context -->
+        <!-- reads on-screen text so the slop detector can check it -->
         <service
             android:name=".accessibility.SlopboardAccessibilityService"
             android:exported="true"
@@ -106,17 +94,6 @@
                 android:name="android.accounts.AccountAuthenticator"
                 android:resource="@xml/authenticator" />
         </service>
-
-        <!-- serves downloaded gifs as content:// URIs for commitContent rich-content insertion -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
 
 </manifest>
