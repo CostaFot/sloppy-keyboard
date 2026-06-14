@@ -15,6 +15,12 @@ val giphyApiKey: String = System.getenv("GIPHY_API_KEY")?.takeIf { it.isNotBlank
         if (file.exists()) file.inputStream().use { load(it) }
     }.getProperty("GIPHY_API_KEY", "")
 
+val aiDetectorApiKey: String = System.getenv("AI_DETECTOR_API_KEY")?.takeIf { it.isNotBlank() }
+    ?: Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }.getProperty("AI_DETECTOR_API_KEY", "")
+
 android {
     defaultConfig {
         applicationId = "com.markedusduplicate.slopboard"
@@ -32,6 +38,7 @@ android {
         }
 
         buildConfigField("String", "GIPHY_API_KEY", "\"$giphyApiKey\"")
+        buildConfigField("String", "AI_DETECTOR_API_KEY", "\"$aiDetectorApiKey\"")
     }
 
     buildFeatures {

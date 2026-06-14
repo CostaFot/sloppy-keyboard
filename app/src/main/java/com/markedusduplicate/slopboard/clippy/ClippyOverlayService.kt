@@ -20,12 +20,11 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.markedusduplicate.common.coroutine.DispatcherProvider
 import com.markedusduplicate.logging.logDebug
-import com.markedusduplicate.slopboard.accessibility.ScreenshotCapturer
 import com.markedusduplicate.slopboard.agent.AgentEngine
 import com.markedusduplicate.slopboard.agent.AgentOverlayView
 import com.markedusduplicate.slopboard.agent.AgentState
-import com.markedusduplicate.slopboard.suggestion.llm.ClippyPrompt
-import com.markedusduplicate.slopboard.suggestion.llm.LlmEngine
+import com.markedusduplicate.slopboard.slop.ScreenReadResult
+import com.markedusduplicate.slopboard.slop.ScreenTextReader
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -40,10 +39,12 @@ import javax.inject.Inject
 /**
  * Hosts the floating Clippy mascot in a system overlay window so it lives over every app, not just
  * the keyboard. Clippy is hidden until summoned by a left→right swipe on the [ClippyEdgeHandleView]
- * tab pinned to the left edge; summoning screenshots the current screen (via the accessibility
- * service's [ScreenshotCapturer]) and asks the on-device multimodal LLM ([LlmEngine]) for a snarky
- * one-liner, shown in a speech bubble — the same capture→infer path the keyboard's Vision feature
- * uses — then auto-hides. Tapping the mascot re-rolls; tapping the bubble dismisses it.
+ * tab pinned to the left edge; summoning reads the text on the current screen (via [ScreenTextReader]
+ * — accessibility text, with screenshot OCR as a fallback) and shows it in a speech bubble, then
+ * auto-hides. Tapping the mascot re-runs the check; tapping the bubble dismisses it. The captured
+ * text is destined for an AI-detection backend
+ * ([com.markedusduplicate.slopboard.slop.AiDetectorRepository]) to judge whether it's AI-generated
+ * "slop" — see the TODO in [detectSlop].
  *
  * Unlike [com.markedusduplicate.slopboard.keyboard.SlopboardKeyboardService] (whose lifecycle is
  * driven by IME bind callbacks), an overlay service has no such callbacks and no decor view, so it
@@ -51,7 +52,7 @@ import javax.inject.Inject
  * overlay view — both required for Compose to compose and recompose.
  *
  * Requires the draw-over-apps permission (checked here) and the accessibility service enabled (for
- * the screenshot). Started/stopped from the setup screen; runs as a plain started service for now.
+ * reading the screen). Started/stopped from the setup screen; runs as a plain started service for now.
  */
 @AndroidEntryPoint
 class ClippyOverlayService :
@@ -61,10 +62,7 @@ class ClippyOverlayService :
     SavedStateRegistryOwner {
 
     @Inject
-    lateinit var engine: LlmEngine
-
-    @Inject
-    lateinit var screenshotCapturer: ScreenshotCapturer
+    lateinit var screenTextReader: ScreenTextReader
 
     @Inject
     lateinit var dispatcherProvider: DispatcherProvider
@@ -147,7 +145,7 @@ class ClippyOverlayService :
         val view = ClippyComposeView(
             context = this,
             state = state.asStateFlow(),
-            onTap = ::roastNow,
+            onTap = ::detectSlopNow,
             onDrag = ::onDrag,
             onDismiss = ::dismiss,
         ).also(::attachOwners)
@@ -156,7 +154,7 @@ class ClippyOverlayService :
 
         val handle = ClippyEdgeHandleView(
             context = this,
-            onSummon = ::roastNow,
+            onSummon = ::detectSlopNow,
             onOpenAgent = agentEngine::start,
         ).also(::attachOwners)
         edgeHandleView = handle
@@ -210,13 +208,13 @@ class ClippyOverlayService :
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    /** Summon Clippy: show him, screenshot the screen, ask the LLM for a one-liner, then auto-hide. */
-    private fun roastNow() {
+    /** Summon Clippy: show him, read the screen's text, surface it, then auto-hide. */
+    private fun detectSlopNow() {
         autoHideJob?.cancel()
         tapJob?.cancel()
         tapJob = scope.launch {
             state.value = ClippyState.Thinking
-            state.value = roast()
+            state.value = detectSlop()
             scheduleAutoHide()
         }
     }
@@ -235,25 +233,16 @@ class ClippyOverlayService :
         }
     }
 
-    private suspend fun roast(): ClippyState {
-        if (!screenshotCapturer.isAvailable) {
-            return ClippyState.Unavailable("Turn on the accessibility service so I can see your screen.")
+    private suspend fun detectSlop(): ClippyState =
+        when (val result = screenTextReader.read()) {
+            is ScreenReadResult.Unavailable -> ClippyState.Unavailable(result.reason)
+            is ScreenReadResult.Text -> {
+                logDebug { "slop: captured ${result.value.length} chars" }
+                // TODO(ai-detector): hand result.value to AiDetectorRepository.detect(...) and show
+                //  the verdict here instead of this raw captured-text preview.
+                ClippyState.Speaking(result.value.take(PREVIEW_CHARS))
+            }
         }
-        val jpeg = screenshotCapturer.capture()
-            ?: return ClippyState.Unavailable("I couldn't grab the screen, awkward.")
-        if (engine.engineOrNull() == null) {
-            return ClippyState.Unavailable("My brain isn't loaded yet (no model). Give me a sec.")
-        }
-        val raw = engine.generateWithImage(jpeg, ClippyPrompt.roast())
-            ?: return ClippyState.Unavailable("My circuits hiccuped. Tap me again.")
-        logDebug { "clippy raw: $raw" }
-        val remark = ClippyPrompt.clean(raw)
-        return if (remark.isEmpty()) {
-            ClippyState.Unavailable("…I've got nothing. That's a first.")
-        } else {
-            ClippyState.Speaking(remark)
-        }
-    }
 
     private fun onDrag(dx: Float, dy: Float) {
         val view = overlayView ?: return
@@ -282,6 +271,7 @@ class ClippyOverlayService :
 
     companion object {
         private const val AUTO_HIDE_MS = 8000L
+        private const val PREVIEW_CHARS = 200
 
         /** True while the overlay is up; read by the setup screen to drive the start/stop toggle. */
         @Volatile
